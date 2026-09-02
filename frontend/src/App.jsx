@@ -1,4 +1,6 @@
 import React from 'react';
+import { useEffect } from "react";
+import { App as CapacitorApp } from "@capacitor/app";
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
@@ -62,6 +64,32 @@ const SmartHomeRoute = () => {
 // Custom Super Admin Pages
 import { AdminLoginPage } from './pages/AdminLoginPage';
 import { AdminDashboardPage } from './pages/AdminDashboardPage';
+function BackButtonHandler() {
+  useEffect(() => {
+    let listener;
+
+    const setupBackButton = async () => {
+      listener = await CapacitorApp.addListener(
+        "backButton",
+        ({ canGoBack }) => {
+          if (canGoBack) {
+            window.history.back();
+          }
+        }
+      );
+    };
+
+    setupBackButton();
+
+    return () => {
+      if (listener) {
+        listener.remove();
+      }
+    };
+  }, []);
+
+  return null;
+}
 
 export default function App() {
   return (
@@ -81,6 +109,7 @@ export default function App() {
               <Route path="/blogs" element={<BlogsPage />} />
               <Route path="/blogs/:slug" element={<BlogDetailPage />} />
               <Route path="/contact" element={<ContactPage />} />
+              <BackButtonHandler />
             </Route>
 
             {/* Authenticated Application Layout */}
