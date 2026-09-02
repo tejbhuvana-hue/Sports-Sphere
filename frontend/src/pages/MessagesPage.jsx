@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { messagesAPI, getMediaUrl } from '../services/api';
-import { CameraIcon, MessagesIcon, CloseIcon } from '../components/common/Icons';
+import { messagesAPI, exploreAPI, getMediaUrl } from '../services/api';
+import { CameraIcon, MessagesIcon, CloseIcon, SearchIcon } from '../components/common/Icons';
 
 export const MessagesPage = () => {
   const { username: routeUsername } = useParams();
@@ -17,10 +17,27 @@ export const MessagesPage = () => {
   const [isSending, setIsSending] = useState(false);
   const [loadingChat, setLoadingChat] = useState(false);
 
-  const messagesEndRef = useRef(null);
+  // Search state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchedUsers, setSearchedUsers] = useState([]);
+  const [isSearchingUsers, setIsSearchingUsers] = useState(false);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  // Ref to chat thread container
+  const chatThreadRef = useRef(null);
+  const messagesEndRef = useRef(null);
+  const isInitialLoadRef = useRef(true);
+
+  const scrollToBottom = (smooth = false) => {
+    if (chatThreadRef.current) {
+      if (smooth) {
+        chatThreadRef.current.scrollTo({
+          top: chatThreadRef.current.scrollHeight,
+          behavior: 'smooth'
+        });
+      } else {
+        chatThreadRef.current.scrollTop = chatThreadRef.current.scrollHeight;
+      }
+    }
   };
 
   const fetchConversations = async () => {
@@ -37,8 +54,8 @@ export const MessagesPage = () => {
     setLoadingChat(true);
     try {
       const res = await messagesAPI.getChat(targetUsername);
-      setActivePartner(res.data.partner);
-      setMessages(res.data.messages || []);
+      setActivePartner(res.data?.partner || null);
+      setMessages(res.data?.messages || []);
       fetchConversations();
     } catch (err) {
       console.error('Failed to load chat', err);
@@ -51,7 +68,9 @@ export const MessagesPage = () => {
     fetchConversations();
   }, []);
 
+  // When route changes (opening a conversation or returning to list)
   useEffect(() => {
+    isInitialLoadRef.current = true;
     if (routeUsername) {
       fetchChat(routeUsername);
     } else {
@@ -60,20 +79,88 @@ export const MessagesPage = () => {
     }
   }, [routeUsername]);
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+  // When chat finished loading or messages first populated, scroll to bottom
+  useLayoutEffect(() => {
+    if (!loadingChat && routeUsername && chatThreadRef.current) {
+      // Force instant scroll to bottom on chat open / re-open
+      chatThreadRef.current.scrollTop = chatThreadRef.current.scrollHeight;
+      const timeoutId = setTimeout(() => {
+        if (chatThreadRef.current) {
+          chatThreadRef.current.scrollTop = chatThreadRef.current.scrollHeight;
+        }
+      }, 50);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [routeUsername, loadingChat]);
 
-  // Periodic polling for new messages every 4 seconds
+  // Periodic polling for new messages every 4 seconds (without interrupting user scroll)
   useEffect(() => {
     if (!routeUsername) return;
-    const interval = setInterval(() => {
-      messagesAPI.getChat(routeUsername).then((res) => {
-        setMessages(res.data.messages || []);
-      }).catch((e) => console.warn(e));
+    const interval = setInterval(async () => {
+      try {
+        const res = await messagesAPI.getChat(routeUsername);
+        const incomingMessages = res.data?.messages || [];
+        
+        setMessages((prevMessages) => {
+          // Check if messages actually changed
+          if (incomingMessages.length === prevMessages.length) {
+            const lastPrev = prevMessages[prevMessages.length - 1];
+            const lastIncoming = incomingMessages[incomingMessages.length - 1];
+            if (lastPrev?.id === lastIncoming?.id && lastPrev?.is_read === lastIncoming?.is_read) {
+              return prevMessages; // Keep reference unchanged to prevent unnecessary render
+            }
+          }
+
+          // If new messages arrived, check if user is near bottom
+          if (chatThreadRef.current) {
+            const { scrollTop, scrollHeight, clientHeight } = chatThreadRef.current;
+            const isNearBottom = scrollHeight - scrollTop - clientHeight < 120;
+            if (isNearBottom) {
+              setTimeout(() => {
+                scrollToBottom(true);
+              }, 60);
+            }
+          }
+
+          return incomingMessages;
+        });
+      } catch (e) {
+        console.warn('Chat poll warning', e);
+      }
     }, 4000);
+
     return () => clearInterval(interval);
   }, [routeUsername]);
+
+  // Search users API debounced when user types in search bar
+  useEffect(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) {
+      setSearchedUsers([]);
+      setIsSearchingUsers(false);
+      return;
+    }
+
+    setIsSearchingUsers(true);
+    const timer = setTimeout(async () => {
+      try {
+        const res = await exploreAPI.search({ q: query });
+        const found = res.data?.users || [];
+        // Filter out self and existing conversation partners to show as new people
+        const existingUsernames = new Set(conversations.map((c) => c.user?.username));
+        const filteredNewUsers = found.filter(
+          (u) => u.username !== currentUser?.username && !existingUsernames.has(u.username)
+        );
+        setSearchedUsers(filteredNewUsers);
+      } catch (err) {
+        console.error('Search users error', err);
+      } finally {
+        setIsSearchingUsers(false);
+      }
+    }, 250);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, conversations, currentUser]);
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
@@ -90,6 +177,11 @@ export const MessagesPage = () => {
       setNewText('');
       setImageFile(null);
       fetchConversations();
+      
+      // Immediately scroll to bottom on send
+      setTimeout(() => {
+        scrollToBottom(false);
+      }, 30);
     } catch (err) {
       console.error('Send message error', err);
     } finally {
@@ -97,26 +189,60 @@ export const MessagesPage = () => {
     }
   };
 
+  // Filter existing conversations based on search query
+  const query = searchQuery.trim().toLowerCase();
+  const filteredConversations = conversations.filter((conv) => {
+    if (!query) return true;
+    const partner = conv.user || {};
+    const username = (partner.username || '').toLowerCase();
+    const fullName = `${partner.first_name || ''} ${partner.last_name || ''}`.toLowerCase();
+    const sport = (partner.sport || '').toLowerCase();
+    return username.includes(query) || fullName.includes(query) || sport.includes(query);
+  });
+
   const isChatOpenOnMobile = !!routeUsername;
 
   return (
     <div className={`messages-layout glass-panel ${isChatOpenOnMobile ? 'chat-active-mobile' : 'list-active-mobile'}`}>
       {/* Left Column: Conversations List */}
       <div className="messages-sidebar">
+        {/* Only search bar and placeholder in sidebar header */}
         <div className="messages-sidebar-header">
-          <h3 className="messages-sidebar-title">Direct Messages</h3>
+          <div className="messages-search-bar">
+            <SearchIcon size={16} className="messages-search-icon" />
+            <input
+              type="text"
+              placeholder="Search people by name..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="messages-search-input"
+              autoComplete="off"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                className="messages-search-clear"
+                onClick={() => setSearchQuery('')}
+                aria-label="Clear search"
+              >
+                <CloseIcon size={14} />
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="messages-conversations-list">
-          {conversations.map((conv) => {
+          {/* 1. Existing Conversations */}
+          {filteredConversations.map((conv) => {
             const partner = conv.user;
             const isSelected = partner.username === routeUsername;
             const avatarUrl = partner.profile_picture ? getMediaUrl(partner.profile_picture) : null;
 
             return (
               <Link
-                key={partner.id}
+                key={partner.id || partner.username}
                 to={`/messages/${partner.username}`}
+                onClick={() => setSearchQuery('')}
                 className={`conversation-item ${isSelected ? 'selected' : ''}`}
               >
                 {avatarUrl ? (
@@ -129,7 +255,7 @@ export const MessagesPage = () => {
                 <div className="conv-meta-wrap">
                   <div className="conv-user-row">
                     <span className="conv-username">
-                      {partner.username}
+                      {partner.first_name ? `${partner.first_name} ${partner.last_name || ''}` : partner.username}
                       {partner.is_verified && (
                         <svg className="verified-badge-sm" viewBox="0 0 24 24" width="12" height="12" fill="var(--accent)">
                           <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
@@ -144,7 +270,7 @@ export const MessagesPage = () => {
                   </div>
                   <div className="conv-preview-row">
                     <span className={`conv-last-msg ${conv.unread_count > 0 ? 'unread' : ''}`}>
-                      {conv.last_message || 'Start chatting...'}
+                      {conv.last_message || `@${partner.username}`}
                     </span>
                     {conv.unread_count > 0 && (
                       <span className="conv-unread-pill">
@@ -157,10 +283,67 @@ export const MessagesPage = () => {
             );
           })}
 
-          {conversations.length === 0 && (
+          {/* 2. Discovered People from Search */}
+          {searchQuery.trim() && searchedUsers.length > 0 && (
+            <>
+              <div className="messages-search-divider">
+                <span>Other People</span>
+              </div>
+              {searchedUsers.map((user) => {
+                const isSelected = user.username === routeUsername;
+                const avatarUrl = user.profile_picture ? getMediaUrl(user.profile_picture) : null;
+                const displayName = user.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : user.username;
+
+                return (
+                  <Link
+                    key={user.id || user.username}
+                    to={`/messages/${user.username}`}
+                    onClick={() => setSearchQuery('')}
+                    className={`conversation-item ${isSelected ? 'selected' : ''}`}
+                  >
+                    {avatarUrl ? (
+                      <img src={avatarUrl} alt={user.username} className="avatar-img-sm" />
+                    ) : (
+                      <div className="avatar-placeholder-sm">
+                        {user.username.slice(0, 2).toUpperCase()}
+                      </div>
+                    )}
+                    <div className="conv-meta-wrap">
+                      <div className="conv-user-row">
+                        <span className="conv-username">
+                          {displayName}
+                          {user.is_verified && (
+                            <svg className="verified-badge-sm" viewBox="0 0 24 24" width="12" height="12" fill="var(--accent)">
+                              <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                            </svg>
+                          )}
+                        </span>
+                      </div>
+                      <div className="conv-preview-row">
+                        <span className="conv-last-msg">
+                          @{user.username} {user.role ? `• ${user.role}` : ''} {user.sport ? `• ${user.sport}` : ''}
+                        </span>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </>
+          )}
+
+          {/* Empty state when searching */}
+          {searchQuery.trim() && filteredConversations.length === 0 && searchedUsers.length === 0 && !isSearchingUsers && (
+            <div className="empty-conv-state">
+              <p>No people found</p>
+              <span>No user matching "{searchQuery}"</span>
+            </div>
+          )}
+
+          {/* Empty state when no conversations and not searching */}
+          {!searchQuery.trim() && conversations.length === 0 && (
             <div className="empty-conv-state">
               <p>No messages yet.</p>
-              <span>Visit an athlete's profile to start a conversation!</span>
+              <span>Use the search bar above or visit an athlete's profile to start chatting!</span>
             </div>
           )}
         </div>
@@ -193,7 +376,7 @@ export const MessagesPage = () => {
                   )}
                   <div className="chat-header-info">
                     <div className="chat-header-name">
-                      {activePartner.username}
+                      {activePartner.first_name ? `${activePartner.first_name} ${activePartner.last_name || ''}` : activePartner.username}
                       {activePartner.is_verified && (
                         <svg className="verified-badge-sm" viewBox="0 0 24 24" width="14" height="14" fill="var(--accent)">
                           <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
@@ -201,7 +384,7 @@ export const MessagesPage = () => {
                       )}
                     </div>
                     <div className="chat-header-role">
-                      {activePartner.role} {activePartner.sport ? `• ${activePartner.sport}` : ''}
+                      @{activePartner.username} {activePartner.role ? `• ${activePartner.role}` : ''} {activePartner.sport ? `• ${activePartner.sport}` : ''}
                     </div>
                   </div>
                 </Link>
@@ -209,9 +392,14 @@ export const MessagesPage = () => {
             </div>
 
             {/* Messages Thread */}
-            <div className="chat-messages-thread">
+            <div className="chat-messages-thread" ref={chatThreadRef}>
               {loadingChat ? (
                 <div className="chat-loading">Loading chat history...</div>
+              ) : messages.length === 0 ? (
+                <div className="empty-chat-state">
+                  <p>No messages here yet.</p>
+                  <span>Send a message to say hello!</span>
+                </div>
               ) : (
                 messages.map((m) => {
                   const isMine = m.sender?.username === currentUser?.username;
@@ -285,7 +473,7 @@ export const MessagesPage = () => {
               <MessagesIcon size={44} />
             </div>
             <h3>Select a conversation</h3>
-            <p>Choose an existing message thread or visit a user's profile to chat.</p>
+            <p>Choose an existing message thread or search people by name to chat.</p>
           </div>
         )}
       </div>

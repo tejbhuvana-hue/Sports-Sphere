@@ -3642,7 +3642,8 @@ img, video {
     margin: 0 !important;
   }
 
-  .main-layout.main-layout-feed {
+  .main-layout.main-layout-feed,
+  .main-layout.main-layout-messages {
     padding: 0 !important;
     margin: 0 !important;
     width: 100% !important;
@@ -3657,7 +3658,8 @@ img, video {
     padding: 0 !important;
   }
 
-  .main-layout.main-layout-feed .main-content {
+  .main-layout.main-layout-feed .main-content,
+  .main-layout.main-layout-messages .main-content {
     padding: 0 !important;
     margin: 0 !important;
     width: 100% !important;
@@ -4005,9 +4007,16 @@ img, video {
   /* Messaging Page Mobile */
   .messages-layout {
     display: block !important;
-    height: calc(100vh - var(--mobile-topbar-height) - var(--mobile-bottomnav-height) - var(--safe-top) - var(--safe-bottom) - 30px) !important;
-    border-radius: 14px !important;
-    overflow: hidden;
+    height: calc(100vh - var(--mobile-topbar-height) - var(--mobile-bottomnav-height) - var(--safe-top) - var(--safe-bottom)) !important;
+    height: calc(100dvh - var(--mobile-topbar-height) - var(--mobile-bottomnav-height) - var(--safe-top) - var(--safe-bottom)) !important;
+    border-radius: 0 !important;
+    border: none !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+    box-shadow: none !important;
+    background: var(--card-bg) !important;
   }
 
   .messages-layout.list-active-mobile .messages-sidebar {
@@ -4908,8 +4917,79 @@ img, video {
 }
 
 .messages-sidebar-header {
-  padding: 16px;
+  padding: 12px 14px;
   border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-subtle);
+}
+
+.messages-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 22px;
+  padding: 8px 14px;
+  width: 100%;
+  box-sizing: border-box;
+  transition: var(--transition);
+}
+
+.messages-search-bar:focus-within {
+  border-color: var(--accent);
+  background: var(--input-bg-focus, var(--card-bg));
+  box-shadow: 0 0 0 3px rgba(0, 168, 232, 0.12);
+}
+
+.messages-search-icon {
+  color: var(--text-secondary);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.messages-search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  font-family: inherit;
+  width: 100%;
+  padding: 0;
+}
+
+.messages-search-input::placeholder {
+  color: var(--text-muted);
+}
+
+.messages-search-clear {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border-radius: 50%;
+  transition: var(--transition);
+}
+
+.messages-search-clear:hover {
+  color: var(--text-primary);
+}
+
+.messages-search-divider {
+  padding: 10px 16px 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-subtle-2);
 }
 
 .messages-sidebar-title {
@@ -5198,6 +5278,24 @@ img, video {
 .no-chat-icon {
   font-size: 3rem;
   margin-bottom: 12px;
+}
+
+.empty-chat-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-secondary);
+  text-align: center;
+  padding: 20px;
+  font-size: 0.9rem;
+}
+
+.empty-chat-state p {
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 4px;
 }
 
 /* ------------------------------------------------------------
@@ -5644,9 +5742,16 @@ img, video {
   /* Messaging Page Mobile */
   .messages-layout {
     display: block !important;
-    height: calc(100vh - var(--mobile-topbar-height) - var(--mobile-bottomnav-height) - var(--safe-top) - var(--safe-bottom) - 30px) !important;
-    border-radius: 14px !important;
-    overflow: hidden;
+    height: calc(100vh - var(--mobile-topbar-height) - var(--mobile-bottomnav-height) - var(--safe-top) - var(--safe-bottom)) !important;
+    height: calc(100dvh - var(--mobile-topbar-height) - var(--mobile-bottomnav-height) - var(--safe-top) - var(--safe-bottom)) !important;
+    border-radius: 0 !important;
+    border: none !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+    box-shadow: none !important;
+    background: var(--card-bg) !important;
   }
 
   .messages-layout.list-active-mobile .messages-sidebar {
