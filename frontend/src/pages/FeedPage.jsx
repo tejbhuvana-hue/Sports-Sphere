@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { postsAPI, getMediaUrl } from '../services/api';
 import { PostCard } from '../components/PostCard';
 import { ReelSlide } from '../components/ReelSlide';
+import { StoryBar } from '../components/stories/StoryBar';
 import { CameraIcon, VideoIcon, FeedIcon, CloseIcon, PlusIcon, ZapIcon } from '../components/common/Icons';
 
 export const FeedPage = () => {
@@ -188,6 +189,9 @@ export const FeedPage = () => {
 
   return (
     <div className="feed-container">
+      {/* Stories Bar (Instagram-like Stories Tray) */}
+      <StoryBar />
+
       {/* Mobile view mode toggle banner if on mobile */}
       {isMobileView && (
         <div className="mobile-view-toggle-bar">

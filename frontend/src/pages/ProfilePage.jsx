@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { profilesAPI, followsAPI, postsAPI, getMediaUrl } from '../services/api';
+import { profilesAPI, followsAPI, postsAPI, storiesAPI, getMediaUrl } from '../services/api';
 import { PostCard } from '../components/PostCard';
 import { EndorsementChips } from '../components/EndorsementChips';
+import { StoryRing } from '../components/stories/StoryRing';
+import { StoryViewerModal } from '../components/stories/StoryViewerModal';
+import { StoryCreatorModal } from '../components/stories/StoryCreatorModal';
 import {
   AddExperienceModal,
   AddAchievementModal,
@@ -43,6 +46,9 @@ export const ProfilePage = () => {
   const [isFollowing, setIsFollowing] = useState(false);
   const [followersCount, setFollowersCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
+  const [userStories, setUserStories] = useState([]);
+  const [showStoryViewer, setShowStoryViewer] = useState(false);
+  const [showStoryCreator, setShowStoryCreator] = useState(false);
 
   // Modals
   const [showExpModal, setShowExpModal] = useState(false);
@@ -77,6 +83,16 @@ export const ProfilePage = () => {
 
       if (postsRes.status === 'fulfilled') {
         setPosts(postsRes.value.data || []);
+      }
+
+      // Fetch active stories for this profile user
+      if (isAuthenticated) {
+        try {
+          const storiesRes = await storiesAPI.getUserStories(targetUsername);
+          setUserStories(storiesRes.data?.stories || []);
+        } catch {
+          setUserStories([]);
+        }
       }
     } catch (err) {
       console.error('Failed to load profile', err);
@@ -159,17 +175,26 @@ export const ProfilePage = () => {
         <div className="profile-header-content">
           <div className="profile-main-info-row">
             <div className="profile-avatar-block">
-              {avatarUrl ? (
-                <img
-                  src={avatarUrl}
-                  alt={profileUser.username}
-                  className="profile-avatar-img"
-                />
-              ) : (
-                <div className="profile-avatar-fallback">
-                  {profileUser.username.slice(0, 2).toUpperCase()}
-                </div>
-              )}
+              <StoryRing
+                user={{
+                  username: profileUser.username,
+                  profile_picture: profile.profile_picture,
+                  is_verified: profileUser.is_verified,
+                }}
+                hasStory={userStories.length > 0}
+                isSeen={userStories.length > 0 && userStories.every((s) => s.has_viewed)}
+                isOwn={isOwnProfile}
+                showAddBadge={isOwnProfile && userStories.length === 0}
+                size="xl"
+                onClick={() => {
+                  if (userStories.length > 0) {
+                    setShowStoryViewer(true);
+                  } else if (isOwnProfile) {
+                    setShowStoryCreator(true);
+                  }
+                }}
+                className="profile-page-avatar-ring"
+              />
 
               <div className="profile-identity">
                 <h2 className="profile-display-name">
@@ -573,6 +598,42 @@ export const ProfilePage = () => {
         playerName={profileUser.username}
         onRecommendationAdded={fetchProfile}
       />
+
+      {/* Story Viewer Modal */}
+      {showStoryViewer && userStories.length > 0 && (
+        <StoryViewerModal
+          storyGroups={[
+            {
+              user: profileUser,
+              stories: userStories,
+              has_unseen: userStories.some((s) => !s.has_viewed),
+              is_current_user: isOwnProfile,
+            },
+          ]}
+          initialUserIndex={0}
+          isOpen={showStoryViewer}
+          onClose={() => setShowStoryViewer(false)}
+          onStoryDeleted={() => {
+            fetchProfile();
+          }}
+          onStoryViewed={(storyId) => {
+            setUserStories((prev) =>
+              prev.map((s) => (s.id === storyId ? { ...s, has_viewed: true } : s))
+            );
+          }}
+        />
+      )}
+
+      {/* Story Creator Modal (for own profile) */}
+      {showStoryCreator && (
+        <StoryCreatorModal
+          isOpen={showStoryCreator}
+          onClose={() => setShowStoryCreator(false)}
+          onStoryCreated={() => {
+            fetchProfile();
+          }}
+        />
+      )}
     </div>
   );
 };

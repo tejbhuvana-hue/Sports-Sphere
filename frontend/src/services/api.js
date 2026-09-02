@@ -1,10 +1,12 @@
 import axios from "axios";
 
-const API_BASE_URL =
-  import.meta.env.API_BASE_URL ||
-  "https://sports-sphere-cfcv.onrender.com/api";
-export const MEDIA_BASE_URL =
-  import.meta.env.MEDIA_BASE_URL || "https://sports-sphere-cfcv.onrender.com";
+const API_BASE_URL = import.meta.env.DEV
+  ? "/api"
+  : (import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || "https://sports-sphere-cfcv.onrender.com/api").replace(/\/+$/, "");
+
+export const MEDIA_BASE_URL = import.meta.env.DEV
+  ? ""
+  : (import.meta.env.VITE_MEDIA_BASE_URL || import.meta.env.MEDIA_BASE_URL || "https://sports-sphere-cfcv.onrender.com").replace(/\/+$/, "");
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -161,6 +163,16 @@ export const blogsAPI = {
   getBlogs: () => api.get("/blogs/"),
   getLatestBlogs: () => api.get("/blogs/latest/"),
   getBlogDetail: (slug) => api.get(`/blogs/${slug}/`),
+};
+
+export const storiesAPI = {
+  getStoriesTray: () => api.get("/stories/"),
+  getStory: (id) => api.get(`/stories/${id}/`),
+  createStory: (data) => api.post("/stories/", data),
+  deleteStory: (id) => api.delete(`/stories/${id}/`),
+  viewStory: (id) => api.post(`/stories/${id}/view/`),
+  getStoryViewers: (id) => api.get(`/stories/${id}/viewers/`),
+  getUserStories: (username) => api.get(`/stories/user/${username}/`),
 };
 
 export const contactAPI = {

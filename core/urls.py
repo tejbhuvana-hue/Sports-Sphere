@@ -77,6 +77,14 @@ urlpatterns = [
     # Contact
     path('contact/', views.ContactSubmitAPIView.as_view(), name='api_contact_submit'),
 
+    # Stories (Instagram-like Stories)
+    path('stories/', views.StoryFeedTrayAPIView.as_view(), name='api_stories_tray'),
+    path('stories/create/', views.StoryCreateAPIView.as_view(), name='api_stories_create'),
+    path('stories/<int:story_id>/', views.StoryDetailAPIView.as_view(), name='api_story_detail'),
+    path('stories/<int:story_id>/view/', views.StoryRecordViewAPIView.as_view(), name='api_story_view'),
+    path('stories/<int:story_id>/viewers/', views.StoryViewersListAPIView.as_view(), name='api_story_viewers'),
+    path('stories/user/<str:username>/', views.UserActiveStoriesAPIView.as_view(), name='api_user_stories'),
+
     # Admin Control Center (Superusers)
     path('admin/stats/', views.AdminStatsAPIView.as_view(), name='api_admin_stats'),
     path('admin/users/', views.AdminUsersListAPIView.as_view(), name='api_admin_users'),

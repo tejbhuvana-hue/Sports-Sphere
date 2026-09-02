@@ -14,7 +14,7 @@ from .models import (
     RecruitmentPost, Application, ClubMember, Tournament, Match,
     SponsorshipOpportunity, SponsorshipApplication,
     ResumeExperience, ResumeAchievement, ResumeCertificate, ResumeStatistic,
-    Endorsement, Recommendation, ContactMessage, Blog
+    Endorsement, Recommendation, ContactMessage, Blog, Story, StoryView
 )
 from .serializers import (
     UserSerializer, UserSummarySerializer, ProfileSerializer,
@@ -26,8 +26,10 @@ from .serializers import (
     ResumeExperienceSerializer, ResumeAchievementSerializer,
     ResumeCertificateSerializer, ResumeStatisticSerializer,
     EndorsementSerializer, RecommendationSerializer,
-    BlogSerializer, ContactMessageSerializer, AdminUserUpdateSerializer
+    BlogSerializer, ContactMessageSerializer, AdminUserUpdateSerializer,
+    StorySerializer, StoryViewSerializer, StoryTrayGroupSerializer
 )
+from django.utils import timezone
 
 User = get_user_model()
 
@@ -1557,4 +1559,245 @@ class AdminFeedbackToggleReadAPIView(APIView):
         return Response({
             'is_read': msg.is_read,
             'message': f"Feedback marked as {status_str}."
+        })
+
+
+# ==========================================
+# STORY APIS (Instagram-like Stories)
+# ==========================================
+
+class StoryFeedTrayAPIView(APIView):
+    """
+    GET: Returns active stories for current user and followed users grouped by user.
+    POST: Creates a new Story.
+    Security: Only includes current user and users current user follows.
+    Expiration: Only includes stories where expires_at > timezone.now().
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
+
+    def get(self, request):
+        now = timezone.now()
+        followed_users = list(request.user.following.all().select_related('profile'))
+        
+        # 1. Current user stories
+        my_stories = Story.objects.filter(
+            user=request.user,
+            expires_at__gt=now
+        ).select_related('user', 'user__profile').prefetch_related('views').order_by('created_at')
+
+        my_stories_data = StorySerializer(my_stories, many=True, context={'request': request}).data
+        my_has_unseen = any(not s['has_viewed'] for s in my_stories_data) if my_stories_data else False
+        my_latest = my_stories.last().created_at if my_stories.exists() else timezone.now()
+
+        tray_groups = [
+            {
+                'user': UserSummarySerializer(request.user, context={'request': request}).data,
+                'stories': my_stories_data,
+                'has_unseen': my_has_unseen,
+                'latest_created_at': my_latest,
+                'is_current_user': True
+            }
+        ]
+
+        # 2. Followed users with active stories
+        if followed_users:
+            followed_user_ids = [u.id for u in followed_users]
+            followed_stories = Story.objects.filter(
+                user_id__in=followed_user_ids,
+                expires_at__gt=now
+            ).select_related('user', 'user__profile').prefetch_related('views').order_by('created_at')
+
+            # Group stories by user
+            from collections import defaultdict
+            stories_by_user = defaultdict(list)
+            for story in followed_stories:
+                stories_by_user[story.user_id].append(story)
+
+            other_groups = []
+            for followed_user in followed_users:
+                u_stories = stories_by_user.get(followed_user.id, [])
+                if not u_stories:
+                    continue  # Only show users with active stories in tray
+
+                u_stories_data = StorySerializer(u_stories, many=True, context={'request': request}).data
+                has_unseen = any(not s['has_viewed'] for s in u_stories_data)
+                latest_time = u_stories[-1].created_at
+
+                other_groups.append({
+                    'user': UserSummarySerializer(followed_user, context={'request': request}).data,
+                    'stories': u_stories_data,
+                    'has_unseen': has_unseen,
+                    'latest_created_at': latest_time,
+                    'is_current_user': False
+                })
+
+            # Sort followed users: unseen stories first, then by latest story creation time descending
+            other_groups.sort(key=lambda g: (not g['has_unseen'], -g['latest_created_at'].timestamp()))
+            tray_groups.extend(other_groups)
+
+        return Response(tray_groups)
+
+    def post(self, request):
+        return create_story_from_request(request)
+
+
+def create_story_from_request(request):
+    story_type = request.data.get('story_type', Story.StoryType.IMAGE)
+    valid_types = [t[0] for t in Story.StoryType.choices]
+    if story_type not in valid_types:
+        story_type = Story.StoryType.IMAGE
+
+    media = request.FILES.get('media')
+    text_content = request.data.get('text_content', '').strip()
+    background_style = request.data.get('background_style', 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)')
+
+    if story_type in [Story.StoryType.IMAGE, Story.StoryType.VIDEO] and not media and not text_content:
+        return Response({'error': 'Please provide media or text for your story.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if story_type == Story.StoryType.TEXT and not text_content:
+        return Response({'error': 'Please provide text for your story.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    expires_at = timezone.now() + datetime.timedelta(hours=24)
+
+    story = Story.objects.create(
+        user=request.user,
+        story_type=story_type,
+        media=media,
+        text_content=text_content,
+        background_style=background_style,
+        expires_at=expires_at
+    )
+
+    serializer = StorySerializer(story, context={'request': request})
+    return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class StoryCreateAPIView(APIView):
+    """
+    Creates a new Story (Image, Video, or Text with background gradient).
+    Sets 24-hour expiration automatically.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
+
+    def post(self, request):
+        return create_story_from_request(request)
+
+
+class StoryDetailAPIView(APIView):
+    """
+    GET: Retrieves a single story. Enforces 24-hour expiration and one-way follow authorization.
+    DELETE: Deletes a story. Owner or superuser only.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, story_id):
+        story = get_object_or_404(Story.objects.select_related('user', 'user__profile'), id=story_id)
+
+        # Check expiration
+        if not story.is_active:
+            return Response({'error': 'This story has expired.'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Check visibility: owner OR follower
+        is_owner = (story.user == request.user or request.user.is_superuser)
+        is_follower = Follow.objects.filter(follower=request.user, following=story.user).exists()
+
+        if not (is_owner or is_follower):
+            return Response({'error': 'You do not have permission to view this story.'}, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = StorySerializer(story, context={'request': request})
+        return Response(serializer.data)
+
+    def delete(self, request, story_id):
+        story = get_object_or_404(Story, id=story_id)
+
+        if story.user != request.user and not request.user.is_superuser:
+            return Response({'error': 'Permission denied. You can only delete your own stories.'}, status=status.HTTP_403_FORBIDDEN)
+
+        story.delete()
+        return Response({'message': 'Story deleted successfully.'}, status=status.HTTP_200_OK)
+
+
+class StoryRecordViewAPIView(APIView):
+    """
+    Records a view on an active story.
+    Enforces authorization (owner or follower).
+    Prevents duplicate views via StoryView unique constraint.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, story_id):
+        story = get_object_or_404(Story, id=story_id)
+
+        if not story.is_active:
+            return Response({'error': 'This story has expired.'}, status=status.HTTP_404_NOT_FOUND)
+
+        is_owner = (story.user == request.user)
+        is_follower = Follow.objects.filter(follower=request.user, following=story.user).exists()
+
+        if not (is_owner or is_follower):
+            return Response({'error': 'You do not have permission to view this story.'}, status=status.HTTP_403_FORBIDDEN)
+
+        # Record view if viewer is not the owner
+        if not is_owner:
+            StoryView.objects.get_or_create(story=story, viewer=request.user)
+
+        views_count = story.views.count()
+        return Response({
+            'success': True,
+            'story_id': story.id,
+            'views_count': views_count
+        })
+
+
+class StoryViewersListAPIView(APIView):
+    """
+    Returns list of viewers for a story.
+    Strictly restricted to the story owner (or superuser).
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, story_id):
+        story = get_object_or_404(Story, id=story_id)
+
+        if story.user != request.user and not request.user.is_superuser:
+            return Response({'error': 'Only the story owner can see story viewers.'}, status=status.HTTP_403_FORBIDDEN)
+
+        views = StoryView.objects.filter(story=story).select_related('viewer', 'viewer__profile').order_by('-viewed_at')
+        serializer = StoryViewSerializer(views, many=True, context={'request': request})
+        return Response({
+            'story_id': story.id,
+            'viewers_count': views.count(),
+            'viewers': serializer.data
+        })
+
+
+class UserActiveStoriesAPIView(APIView):
+    """
+    Returns active stories for a specific user.
+    Allowed only if requester is the user OR follows the user.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, username):
+        target_user = get_object_or_404(User.objects.select_related('profile'), username__iexact=username)
+
+        is_owner = (target_user == request.user or request.user.is_superuser)
+        is_follower = Follow.objects.filter(follower=request.user, following=target_user).exists()
+
+        if not (is_owner or is_follower):
+            return Response({'error': 'You must follow this user to view their stories.'}, status=status.HTTP_403_FORBIDDEN)
+
+        now = timezone.now()
+        active_stories = Story.objects.filter(
+            user=target_user,
+            expires_at__gt=now
+        ).select_related('user', 'user__profile').prefetch_related('views').order_by('created_at')
+
+        serializer = StorySerializer(active_stories, many=True, context={'request': request})
+        return Response({
+            'user': UserSummarySerializer(target_user, context={'request': request}).data,
+            'stories': serializer.data,
+            'count': active_stories.count()
         })

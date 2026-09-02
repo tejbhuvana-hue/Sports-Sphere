@@ -625,3 +625,84 @@ class Blog(models.Model):
         return f"{self.title} ({status})"
 
 
+class Story(models.Model):
+    class StoryType(models.TextChoices):
+        IMAGE = 'IMAGE', 'Image'
+        VIDEO = 'VIDEO', 'Video'
+        TEXT = 'TEXT', 'Text'
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='stories'
+    )
+    media = models.FileField(
+        upload_to='stories/media/',
+        blank=True,
+        null=True
+    )
+    story_type = models.CharField(
+        max_length=10,
+        choices=StoryType.choices,
+        default=StoryType.IMAGE
+    )
+    text_content = models.TextField(
+        blank=True,
+        null=True
+    )
+    background_style = models.CharField(
+        max_length=150,
+        blank=True,
+        null=True,
+        default='linear-gradient(135deg, #0f172a 0%, #1e293b 100%)'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def save(self, *args, **kwargs):
+        if not self.expires_at:
+            from django.utils import timezone
+            import datetime
+            self.expires_at = timezone.now() + datetime.timedelta(hours=24)
+        super().save(*args, **kwargs)
+
+    @property
+    def is_active(self):
+        from django.utils import timezone
+        if not self.expires_at:
+            return False
+        return self.expires_at > timezone.now()
+
+    def __str__(self):
+        return f"Story ({self.story_type}) by {self.user.username} at {self.created_at}"
+
+
+class StoryView(models.Model):
+    story = models.ForeignKey(
+        Story,
+        on_delete=models.CASCADE,
+        related_name='views'
+    )
+    viewer = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='story_views'
+    )
+    viewed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-viewed_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['story', 'viewer'],
+                name='unique_story_view'
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.viewer.username} viewed story {self.story_id} at {self.viewed_at}"
+
+

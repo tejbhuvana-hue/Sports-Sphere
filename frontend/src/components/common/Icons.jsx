@@ -298,4 +298,38 @@ export const BookmarkIcon = ({ size = 20, color = 'currentColor', fill = 'none',
   </svg>
 );
 
+export const EyeIcon = ({ size = 20, color = 'currentColor', className = '' }) => (
+  <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+    <circle cx="12" cy="12" r="3"></circle>
+  </svg>
+);
+
+export const ChevronLeftIcon = ({ size = 18, color = 'currentColor', className = '' }) => (
+  <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <polyline points="15 18 9 12 15 6"></polyline>
+  </svg>
+);
+
+export const PlayIcon = ({ size = 20, color = 'currentColor', className = '' }) => (
+  <svg viewBox="0 0 24 24" width={size} height={size} fill={color} stroke={color} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <polygon points="5 3 19 12 5 21 5 3"></polygon>
+  </svg>
+);
+
+export const PauseIcon = ({ size = 20, color = 'currentColor', className = '' }) => (
+  <svg viewBox="0 0 24 24" width={size} height={size} fill={color} stroke={color} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <rect x="6" y="4" width="4" height="16"></rect>
+    <rect x="14" y="4" width="4" height="16"></rect>
+  </svg>
+);
+
+export const TypeIcon = ({ size = 20, color = 'currentColor', className = '' }) => (
+  <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <polyline points="4 7 4 4 20 4 20 7"></polyline>
+    <line x1="9" y1="20" x2="15" y2="20"></line>
+    <line x1="12" y1="4" x2="12" y2="20"></line>
+  </svg>
+);
+
 

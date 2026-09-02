@@ -6,7 +6,7 @@ from .models import (
     RecruitmentPost, Application, ClubMember, Tournament, Match,
     SponsorshipOpportunity, SponsorshipApplication,
     ResumeExperience, ResumeAchievement, ResumeCertificate, ResumeStatistic,
-    Endorsement, Recommendation, ContactMessage, Blog
+    Endorsement, Recommendation, ContactMessage, Blog, Story, StoryView
 )
 
 User = get_user_model()
@@ -534,3 +534,60 @@ class AdminUserUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['username', 'email', 'first_name', 'last_name', 'role', 'is_active', 'is_verified']
+
+
+class StoryViewSerializer(serializers.ModelSerializer):
+    viewer = UserSummarySerializer(read_only=True)
+
+    class Meta:
+        model = StoryView
+        fields = ['id', 'viewer', 'viewed_at']
+        read_only_fields = ['id', 'viewer', 'viewed_at']
+
+
+class StorySerializer(serializers.ModelSerializer):
+    user = UserSummarySerializer(read_only=True)
+    media = serializers.SerializerMethodField()
+    views_count = serializers.SerializerMethodField()
+    has_viewed = serializers.SerializerMethodField()
+    is_owner = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Story
+        fields = [
+            'id', 'user', 'media', 'story_type', 'text_content',
+            'background_style', 'created_at', 'expires_at',
+            'views_count', 'has_viewed', 'is_owner'
+        ]
+        read_only_fields = ['id', 'user', 'created_at', 'expires_at']
+
+    def get_media(self, obj):
+        if obj.media:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.media.url)
+            return obj.media.url
+        return None
+
+    def get_views_count(self, obj):
+        return obj.views.count()
+
+    def get_has_viewed(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            return obj.views.filter(viewer=request.user).exists()
+        return False
+
+    def get_is_owner(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            return obj.user == request.user or request.user.is_superuser
+        return False
+
+
+class StoryTrayGroupSerializer(serializers.Serializer):
+    user = UserSummarySerializer()
+    stories = StorySerializer(many=True)
+    has_unseen = serializers.BooleanField()
+    latest_created_at = serializers.DateTimeField()
+    is_current_user = serializers.BooleanField()
