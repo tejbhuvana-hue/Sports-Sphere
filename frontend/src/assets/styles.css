@@ -2990,30 +2990,39 @@ img, video {
   background: var(--btn-secondary-bg-hover);
 }
 
-.mobile-topbar-icon-btn.mobile-theme-btn {
-  background: var(--btn-secondary-bg) !important;
-  border: var(--btn-secondary-border) !important;
+.mobile-topbar-icon-btn.mobile-theme-btn,
+.mobile-topbar-icon-btn.mobile-add-btn {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
   color: var(--text-primary) !important;
+  padding: 0;
+  width: 36px;
+  height: 36px;
 }
-.mobile-topbar-icon-btn.mobile-theme-btn svg {
+.mobile-topbar-icon-btn.mobile-theme-btn:hover,
+.mobile-topbar-icon-btn.mobile-add-btn:hover {
+  background: transparent !important;
+  color: var(--accent) !important;
+}
+.mobile-topbar-icon-btn.mobile-theme-btn:active,
+.mobile-topbar-icon-btn.mobile-add-btn:active {
+  background: transparent !important;
+  transform: scale(0.92);
+}
+.mobile-topbar-icon-btn.mobile-theme-btn svg,
+.mobile-topbar-icon-btn.mobile-add-btn svg {
   color: var(--text-primary) !important;
   stroke: var(--text-primary) !important;
+  transition: stroke 0.2s ease, color 0.2s ease;
 }
-
-.mobile-topbar-icon-btn.mobile-add-btn {
-  background: var(--accent) !important;
-  color: #ffffff !important;
-  border: 1px solid var(--accent) !important;
-  box-shadow: 0 2px 10px rgba(0, 119, 182, 0.35) !important;
-}
-.mobile-topbar-icon-btn.mobile-add-btn svg {
-  color: #ffffff !important;
-  stroke: #ffffff !important;
-  fill: none !important;
+.mobile-topbar-icon-btn.mobile-theme-btn:hover svg,
+.mobile-topbar-icon-btn.mobile-add-btn:hover svg {
+  color: var(--accent) !important;
+  stroke: var(--accent) !important;
 }
 .mobile-topbar-icon-btn.mobile-add-btn svg line {
-  stroke: #ffffff !important;
-  stroke-width: 2.8px !important;
+  stroke: currentColor !important;
 }
 
 .mobile-topbar-icon-btn.mobile-notif-btn {
@@ -5876,17 +5885,17 @@ img, video {
 }
 
 /* ------------------------------------------------------------
-   HIGH-CONTRAST MOBILE TOPBAR PLUS BUTTON
+   CLEAN MOBILE TOPBAR PLUS BUTTON
    ------------------------------------------------------------ */
 .mobile-add-btn {
-  background: var(--accent) !important;
-  color: #ffffff !important;
-  border: 1px solid var(--accent) !important;
-  box-shadow: 0 2px 10px rgba(0, 119, 182, 0.35) !important;
+  background: transparent !important;
+  color: var(--text-primary) !important;
+  border: none !important;
+  box-shadow: none !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  transition: transform 0.18s ease !important;
+  transition: transform 0.18s ease, color 0.18s ease !important;
 }
 
 .mobile-add-btn:active {
@@ -5894,15 +5903,20 @@ img, video {
 }
 
 .mobile-add-btn svg {
-  stroke: #ffffff !important;
-  color: #ffffff !important;
+  stroke: var(--text-primary) !important;
+  color: var(--text-primary) !important;
   fill: none !important;
   display: block !important;
 }
 
+.mobile-add-btn:hover svg {
+  stroke: var(--accent) !important;
+  color: var(--accent) !important;
+}
+
 .mobile-add-btn svg line {
-  stroke: #ffffff !important;
-  stroke-width: 2.8px !important;
+  stroke: currentColor !important;
+  stroke-width: 2.4px !important;
 }
 
 

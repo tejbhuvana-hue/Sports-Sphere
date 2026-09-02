@@ -1,15 +1,15 @@
 import React from 'react';
 
-export const PlusIcon = ({ size = 20, color = 'currentColor', strokeWidth = 2.8, className = '' }) => (
+export const PlusIcon = ({ size = 20, color = 'currentColor', strokeWidth = 2.2, className = '' }) => (
   <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className} style={{ display: 'block' }}>
-    <line x1="12" y1="5" x2="12" y2="19" stroke={color} strokeWidth={strokeWidth}></line>
-    <line x1="5" y1="12" x2="19" y2="12" stroke={color} strokeWidth={strokeWidth}></line>
+    <line x1="12" y1="5" x2="12" y2="19"></line>
+    <line x1="5" y1="12" x2="19" y2="12"></line>
   </svg>
 );
 
-export const SunIcon = ({ size = 18, color = 'currentColor', className = '' }) => (
-  <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className={className} style={{ display: 'block' }}>
-    <circle cx="12" cy="12" r="4" fill="currentColor"></circle>
+export const SunIcon = ({ size = 20, color = 'currentColor', strokeWidth = 2, className = '' }) => (
+  <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className} style={{ display: 'block' }}>
+    <circle cx="12" cy="12" r="5"></circle>
     <line x1="12" y1="1" x2="12" y2="3"></line>
     <line x1="12" y1="21" x2="12" y2="23"></line>
     <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
@@ -21,8 +21,8 @@ export const SunIcon = ({ size = 18, color = 'currentColor', className = '' }) =
   </svg>
 );
 
-export const MoonIcon = ({ size = 18, color = 'currentColor', className = '' }) => (
-  <svg viewBox="0 0 24 24" width={size} height={size} fill="currentColor" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className} style={{ display: 'block' }}>
+export const MoonIcon = ({ size = 20, color = 'currentColor', strokeWidth = 2, className = '' }) => (
+  <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className} style={{ display: 'block' }}>
     <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
   </svg>
 );

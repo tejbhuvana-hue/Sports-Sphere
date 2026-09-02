@@ -20,7 +20,7 @@ export const MobileTopBar = ({ onOpenCreatePost }) => {
 
       {/* Action items on right side */}
       <div className="mobile-topbar-actions">
-        {/* Theme Toggle Button */}
+        {/* Theme Toggle Icon (Moon for Light theme, Sun for Dark theme) */}
         <button
           type="button"
           onClick={toggleTheme}
@@ -28,10 +28,10 @@ export const MobileTopBar = ({ onOpenCreatePost }) => {
           title={`Switch to ${theme === 'light' ? 'Dark' : 'Light'} Mode`}
           aria-label="Toggle Theme"
         >
-          {theme === 'light' ? <MoonIcon size={18} /> : <SunIcon size={18} />}
+          {theme === 'light' ? <MoonIcon size={21} /> : <SunIcon size={21} />}
         </button>
 
-        {/* 2. Plus Button: Create Post (High visibility with white SVG icon) */}
+        {/* 2. Plus Icon: Create Post */}
         <button
           type="button"
           onClick={onOpenCreatePost}
@@ -40,7 +40,7 @@ export const MobileTopBar = ({ onOpenCreatePost }) => {
           aria-label="Create Post"
           id="mobile-create-post-topbar-btn"
         >
-          <PlusIcon size={22} color="#ffffff" strokeWidth={2.6} />
+          <PlusIcon size={23} strokeWidth={2.4} />
         </button>
 
         {/* 3. Authenticated Username / Profile link */}

@@ -65,38 +65,42 @@ export const Navbar = ({ onToggleSidebar }) => {
           title={`Switch to ${theme === 'light' ? 'Dark' : 'Light'} Mode`}
           aria-label="Toggle Theme"
           style={{
-            background: 'var(--nav-item-bg)',
-            border: '1px solid var(--border-subtle)',
-            borderRadius: '50%',
+            background: 'transparent',
+            border: 'none',
+            boxShadow: 'none',
             width: '36px',
             height: '36px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
-            color: 'var(--text-primary)'
+            color: 'var(--text-primary)',
+            padding: 0,
+            transition: 'color 0.2s ease, transform 0.2s ease'
           }}
         >
-          {theme === 'light' ? <MoonIcon size={18} /> : <SunIcon size={18} />}
+          {theme === 'light' ? <MoonIcon size={21} /> : <SunIcon size={21} />}
         </button>
 
         <Link
           to="/feed"
-          className="nav-icon-btn"
           title="Create Post"
           style={{
-            background: 'var(--accent)',
-            color: '#ffffff',
-            borderRadius: '50%',
+            background: 'transparent',
+            border: 'none',
+            boxShadow: 'none',
+            color: 'var(--text-primary)',
             width: '36px',
             height: '36px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            textDecoration: 'none'
+            textDecoration: 'none',
+            padding: 0,
+            transition: 'color 0.2s ease, transform 0.2s ease'
           }}
         >
-          <PlusIcon size={20} color="#ffffff" strokeWidth={2.6} />
+          <PlusIcon size={23} strokeWidth={2.4} />
         </Link>
         <Link to="/messages" className="nav-icon-btn" title="Messages">
           <MessagesIcon size={20} />
