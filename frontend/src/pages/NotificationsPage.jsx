@@ -1,19 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { notificationsAPI, getMediaUrl } from '../services/api';
-import { BellIcon } from '../components/common/Icons';
+import { BellIcon, TrashIcon, MessagesIcon, HeartIcon, CommentIcon } from '../components/common/Icons';
 
 export const NotificationsPage = () => {
   const { setUnreadNotifications } = useAuth();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isClearing, setIsClearing] = useState(false);
+  const navigate = useNavigate();
 
   const fetchNotifications = async () => {
     try {
       const res = await notificationsAPI.getNotifications();
       setNotifications(res.data.notifications || []);
-      // Mark all as read automatically upon viewing
+      // Automatically mark as read upon viewing
       await notificationsAPI.markAsRead();
       setUnreadNotifications(0);
     } catch (err) {
@@ -27,82 +29,155 @@ export const NotificationsPage = () => {
     fetchNotifications();
   }, []);
 
+  const handleClearAll = async () => {
+    if (notifications.length === 0 || isClearing) return;
+    setIsClearing(true);
+    try {
+      await notificationsAPI.clearAll();
+      setNotifications([]);
+      setUnreadNotifications(0);
+    } catch (err) {
+      console.error('Failed to clear notifications', err);
+    } finally {
+      setIsClearing(false);
+    }
+  };
+
+  const handleDeleteOne = async (e, id) => {
+    e.stopPropagation();
+    try {
+      await notificationsAPI.deleteNotification(id);
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
+    } catch (err) {
+      console.error('Failed to delete notification', err);
+    }
+  };
+
+  const handleNotificationClick = (n) => {
+    const type = n.notification_type;
+    const sender = n.sender;
+    const post = n.post;
+
+    if (type === 'MESSAGE' && sender?.username) {
+      navigate(`/messages/${sender.username}`);
+    } else if (type === 'FOLLOW' && sender?.username) {
+      navigate(`/profile/${sender.username}`);
+    } else if ((type === 'LIKE' || type === 'COMMENT') && post) {
+      const postId = typeof post === 'object' ? post.id : post;
+      navigate(`/feed?post=${postId}`);
+    } else if (sender?.username) {
+      navigate(`/profile/${sender.username}`);
+    }
+  };
+
+  const getNotificationIcon = (type) => {
+    switch (type) {
+      case 'MESSAGE':
+        return <MessagesIcon size={16} />;
+      case 'LIKE':
+        return <HeartIcon size={16} fill="currentColor" />;
+      case 'COMMENT':
+        return <CommentIcon size={16} />;
+      default:
+        return <BellIcon size={16} />;
+    }
+  };
+
   return (
-    <div className="notifications-container" style={{ maxWidth: '680px', margin: '0 auto' }}>
-      <div className="glass-panel" style={{ padding: '24px', borderRadius: 'var(--border-radius)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '14px' }}>
-          <h2 style={{ fontSize: '1.4rem', fontWeight: '800' }}>Notifications</h2>
-          <button
-            onClick={fetchNotifications}
-            className="btn btn-secondary btn-sm"
-            style={{ fontSize: '0.8rem' }}
-          >
-            Refresh
-          </button>
+    <div className="notifications-container">
+      <div className="notifications-panel glass-panel">
+        <div className="notifications-header">
+          <h2 className="notifications-title">Notifications</h2>
+          {notifications.length > 0 && (
+            <button
+              type="button"
+              onClick={handleClearAll}
+              disabled={isClearing}
+              className="btn btn-secondary btn-sm notif-clear-btn"
+              title="Clear all notifications"
+            >
+              <TrashIcon size={14} />
+              <span>{isClearing ? 'Clearing...' : 'Clear All'}</span>
+            </button>
+          )}
         </div>
 
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '30px', color: 'var(--text-secondary)' }}>Loading notifications...</div>
+          <div className="notifications-loading">Loading notifications...</div>
         ) : notifications.length > 0 ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div className="notifications-list">
             {notifications.map((n) => {
               const sender = n.sender || {};
               const avatarUrl = sender.profile_picture ? getMediaUrl(sender.profile_picture) : null;
+              const displayName = sender.first_name ? `${sender.first_name} ${sender.last_name || ''}`.trim() : sender.username;
 
               return (
                 <div
                   key={n.id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '14px',
-                    padding: '14px',
-                    borderRadius: '10px',
-                    background: n.is_read ? 'var(--bg-subtle-2)' : 'rgba(0, 217, 255, 0.08)',
-                    border: n.is_read ? '1px solid transparent' : '1px solid var(--glass-border)',
-                    transition: 'var(--transition)'
+                  onClick={() => handleNotificationClick(n)}
+                  className={`notification-item ${n.is_read ? 'read' : 'unread'}`}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      handleNotificationClick(n);
+                    }
                   }}
                 >
-                  {sender.username ? (
-                    <Link to={`/profile/${sender.username}`}>
-                      {avatarUrl ? (
-                        <img src={avatarUrl} alt={sender.username} style={{ width: '42px', height: '42px', borderRadius: '50%', objectFit: 'cover' }} />
-                      ) : (
-                        <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800' }}>
-                          {sender.username.slice(0, 2).toUpperCase()}
-                        </div>
-                      )}
-                    </Link>
-                  ) : (
-                    <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <BellIcon size={20} />
-                    </div>
-                  )}
-
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '0.92rem', color: 'var(--text-primary)' }}>
-                      {sender.username ? (
-                        <Link to={`/profile/${sender.username}`} style={{ fontWeight: '700', color: 'var(--text-primary)', textDecoration: 'none', marginRight: '6px' }}>
-                          {sender.username}
-                        </Link>
-                      ) : null}
-                      <span>{n.message}</span>
-                    </div>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px', display: 'block' }}>
-                      {new Date(n.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  <div className="notif-avatar-wrapper">
+                    {avatarUrl ? (
+                      <img src={avatarUrl} alt={sender.username || 'User'} className="notif-avatar-img" />
+                    ) : (
+                      <div className="notif-avatar-placeholder">
+                        {sender.username ? sender.username.slice(0, 2).toUpperCase() : <BellIcon size={18} />}
+                      </div>
+                    )}
+                    <span className={`notif-type-badge notif-type-${(n.notification_type || 'system').toLowerCase()}`}>
+                      {getNotificationIcon(n.notification_type)}
                     </span>
                   </div>
 
-                  {!n.is_read && (
-                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent)' }}></span>
-                  )}
+                  <div className="notif-content">
+                    <div className="notif-message-row">
+                      {sender.username && (
+                        <span className="notif-sender-name">
+                          {displayName || sender.username}
+                        </span>
+                      )}
+                      <span className="notif-text">{n.message}</span>
+                    </div>
+                    <span className="notif-time">
+                      {new Date(n.created_at).toLocaleDateString(undefined, {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </span>
+                  </div>
+
+                  <div className="notif-actions">
+                    {!n.is_read && <span className="notif-unread-dot"></span>}
+                    <button
+                      type="button"
+                      onClick={(e) => handleDeleteOne(e, n.id)}
+                      className="notif-delete-btn"
+                      title="Delete notification"
+                      aria-label="Delete notification"
+                    >
+                      <TrashIcon size={14} />
+                    </button>
+                  </div>
                 </div>
               );
             })}
           </div>
         ) : (
-          <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-secondary)' }}>
-            <BellIcon size={44} className="empty-icon" />
+          <div className="empty-notif-state">
+            <div className="empty-notif-icon">
+              <BellIcon size={44} />
+            </div>
+            <h3>No notifications yet</h3>
             <p>You have no notifications right now.</p>
           </div>
         )}

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { messagesAPI, exploreAPI, getMediaUrl } from '../services/api';
-import { CameraIcon, MessagesIcon, CloseIcon, SearchIcon } from '../components/common/Icons';
+import { CameraIcon, MessagesIcon, CloseIcon, SearchIcon, ArrowLeftIcon } from '../components/common/Icons';
 
 export const MessagesPage = () => {
   const { username: routeUsername } = useParams();
@@ -362,7 +362,7 @@ export const MessagesPage = () => {
                 onClick={() => navigate('/messages')}
                 aria-label="Back to conversations"
               >
-                &larr;
+                <ArrowLeftIcon size={22} />
               </button>
 
               {activePartner && (

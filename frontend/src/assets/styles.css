@@ -1309,37 +1309,265 @@ input[type="checkbox"] {
   border-top: 1px solid var(--glass-border);
 }
 
-/* Notifications layout */
+/* ============================================================
+   NOTIFICATIONS PAGE STYLES
+   ============================================================ */
+.notifications-container {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.notifications-panel {
+  padding: 24px;
+  border-radius: var(--border-radius);
+  display: flex;
+  flex-direction: column;
+  background: var(--card-bg);
+}
+
+.notifications-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 14px;
+}
+
+.notifications-title {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.notif-clear-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 6px 14px !important;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.notif-clear-btn:hover {
+  background: rgba(255, 77, 77, 0.15) !important;
+  color: #ff4d4d !important;
+  border-color: rgba(255, 77, 77, 0.3) !important;
+}
+
+.notifications-loading {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
 .notifications-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
-.notification-card {
-  padding: 16px 20px;
+.notification-item {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--bg-subtle-2);
+  border: 1px solid var(--border-subtle-2);
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+  user-select: none;
+  position: relative;
 }
 
-.notification-main {
+.notification-item:hover {
+  background: var(--accent-bg-subtle, var(--bg-subtle));
+  border-color: var(--glass-border);
+  transform: translateY(-1px);
+}
+
+.notification-item.unread {
+  background: rgba(0, 168, 232, 0.08);
+  border-color: rgba(0, 168, 232, 0.25);
+}
+
+.notif-avatar-wrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.notif-avatar-img {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+
+.notif-avatar-placeholder {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--btn-primary-text);
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.95rem;
 }
 
-.notification-text {
-  font-size: 0.92rem;
+.notif-type-badge {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--card-bg);
+  border: 1.5px solid var(--card-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
 }
 
-.notification-text strong {
+.notif-type-badge.notif-type-message {
+  color: #00a8e8;
+}
+
+.notif-type-badge.notif-type-like {
+  color: #ff3366;
+}
+
+.notif-type-badge.notif-type-comment {
+  color: #00c853;
+}
+
+.notif-type-badge.notif-type-follow {
+  color: #a855f7;
+}
+
+.notif-type-badge.notif-type-system {
   color: var(--accent);
 }
 
-.notification-unseen {
-  border-left: 3px solid var(--accent);
+.notif-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.notif-message-row {
+  font-size: 0.92rem;
+  color: var(--text-primary);
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.notif-sender-name {
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-right: 6px;
+}
+
+.notif-text {
+  color: var(--text-secondary);
+}
+
+.notif-time {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  display: block;
+}
+
+.notif-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.notif-unread-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  display: block;
+}
+
+.notif-delete-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.6;
+  transition: opacity 0.15s, color 0.15s;
+}
+
+.notif-delete-btn:hover {
+  opacity: 1;
+  color: #ff4d4d;
+}
+
+.empty-notif-state {
+  text-align: center;
+  padding: 48px 20px;
+  color: var(--text-secondary);
+}
+
+.empty-notif-icon {
+  color: var(--accent);
+  margin-bottom: 14px;
+  display: flex;
+  justify-content: center;
+}
+
+.empty-notif-state h3 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 6px 0;
+}
+
+.empty-notif-state p {
+  font-size: 0.88rem;
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .notifications-container {
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .notifications-panel {
+    border-radius: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 16px 14px !important;
+    background: transparent !important;
+  }
+
+  .notification-item {
+    padding: 12px 14px;
+    border-radius: 10px;
+  }
 }
 
 /* General Layout Utilities */
@@ -4054,15 +4282,17 @@ img, video {
     display: inline-flex !important;
     align-items: center;
     justify-content: center;
-    background: var(--nav-item-bg);
-    border: 1px solid var(--border-subtle);
-    border-radius: 50%;
-    width: 34px;
-    height: 34px;
-    color: var(--text-primary);
-    font-size: 1.1rem;
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 6px 8px 6px 0 !important;
+    width: auto !important;
+    height: auto !important;
+    color: var(--text-primary) !important;
     cursor: pointer;
     margin-right: 8px;
+    box-shadow: none !important;
+    outline: none !important;
   }
 
   .chat-header {
@@ -5802,15 +6032,17 @@ img, video {
     display: inline-flex !important;
     align-items: center;
     justify-content: center;
-    background: var(--nav-item-bg);
-    border: 1px solid var(--border-subtle);
-    border-radius: 50%;
-    width: 34px;
-    height: 34px;
-    color: var(--text-primary);
-    font-size: 1.1rem;
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 6px 8px 6px 0 !important;
+    width: auto !important;
+    height: auto !important;
+    color: var(--text-primary) !important;
     cursor: pointer;
     margin-right: 8px;
+    box-shadow: none !important;
+    outline: none !important;
   }
 
   .chat-header {

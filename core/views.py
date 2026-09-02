@@ -794,6 +794,10 @@ class NotificationListAPIView(APIView):
             'unread_count': unread_count
         })
 
+    def delete(self, request):
+        request.user.notifications.all().delete()
+        return Response({'message': 'All notifications cleared.'})
+
 
 class MarkNotificationsReadAPIView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -801,6 +805,26 @@ class MarkNotificationsReadAPIView(APIView):
     def post(self, request):
         request.user.notifications.filter(is_read=False).update(is_read=True)
         return Response({'message': 'All notifications marked as read.'})
+
+
+class ClearNotificationsAPIView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        request.user.notifications.all().delete()
+        return Response({'message': 'All notifications cleared.'})
+
+    def delete(self, request):
+        request.user.notifications.all().delete()
+        return Response({'message': 'All notifications cleared.'})
+
+
+class NotificationDetailAPIView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def delete(self, request, notification_id):
+        request.user.notifications.filter(id=notification_id).delete()
+        return Response({'message': 'Notification deleted.'})
 
 
 # ==========================================

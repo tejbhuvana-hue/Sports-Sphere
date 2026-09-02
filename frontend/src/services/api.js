@@ -115,6 +115,8 @@ export const messagesAPI = {
 export const notificationsAPI = {
   getNotifications: () => api.get("/notifications/"),
   markAsRead: () => api.post("/notifications/mark-read/"),
+  clearAll: () => api.delete("/notifications/clear/"),
+  deleteNotification: (id) => api.delete(`/notifications/${id}/`),
 };
 
 export const recruitmentAPI = {

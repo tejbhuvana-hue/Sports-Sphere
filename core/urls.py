@@ -42,6 +42,8 @@ urlpatterns = [
 
     # Notifications
     path('notifications/', views.NotificationListAPIView.as_view(), name='api_notifications_list'),
+    path('notifications/clear/', views.ClearNotificationsAPIView.as_view(), name='api_notifications_clear'),
+    path('notifications/<int:notification_id>/', views.NotificationDetailAPIView.as_view(), name='api_notifications_detail'),
     path('notifications/mark-read/', views.MarkNotificationsReadAPIView.as_view(), name='api_notifications_mark_read'),
 
     # Recruitment
