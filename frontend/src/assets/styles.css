@@ -7374,20 +7374,29 @@ img, video {
   position: absolute;
   bottom: 0px;
   right: 0px;
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   background: var(--accent);
   border: 2px solid var(--bg-primary);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-  transition: transform 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+  cursor: pointer;
+  touch-action: manipulation;
+  z-index: 3;
 }
 
-.story-bar-item:hover .story-ring-add-badge {
-  transform: scale(1.15);
+.story-ring-add-badge:hover,
+.story-ring-add-badge:focus-visible {
+  transform: scale(1.22);
+  box-shadow: 0 0 10px rgba(0, 217, 255, 0.6);
+}
+
+.story-ring-add-badge:active {
+  transform: scale(0.95);
 }
 
 /* ------------------------------------------------------------
@@ -8103,7 +8112,10 @@ img, video {
   .story-bar-wrapper {
     margin-bottom: 14px;
     padding: 10px 12px;
-    border-radius: 12px;
+    border-radius: 14px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   .story-bar-scroll-btn {
@@ -8112,10 +8124,13 @@ img, video {
 
   .story-bar-scroll-container {
     gap: 12px;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
   }
 
   .story-bar-item {
     width: 62px;
+    flex-shrink: 0;
   }
 
   .story-bar-username {
@@ -8172,6 +8187,7 @@ img, video {
 @media (max-width: 360px) {
   .story-bar-item {
     width: 54px;
+    flex-shrink: 0;
   }
 
   .story-bar-username {
@@ -8187,6 +8203,11 @@ img, video {
   .story-ring-md .story-ring-inner {
     width: 42px;
     height: 42px;
+  }
+
+  .story-ring-add-badge {
+    width: 18px;
+    height: 18px;
   }
 }
 

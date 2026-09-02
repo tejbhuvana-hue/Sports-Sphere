@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { postsAPI, tournamentsAPI, recruitmentAPI, getMediaUrl, followsAPI } from '../services/api';
 import { PostCard } from '../components/PostCard';
+import { StoryBar } from '../components/stories/StoryBar';
 import {
   ZapIcon,
   TrophyIcon,
@@ -87,60 +88,8 @@ export const HomePage = ({ onOpenCreatePost }) => {
 
   return (
     <div className="home-dashboard-container">
-      {/* 1. TOP STORIES / SUGGESTED PROFILES CAROUSEL */}
-      <section className="home-stories-section">
-        <div className="home-stories-track">
-          {/* User's own story / quick post circle */}
-          <div
-            className="home-story-item home-my-story"
-            onClick={onOpenCreatePost}
-            title="Create a new post"
-          >
-            <div className="home-story-avatar-wrap my-story-wrap">
-              {myAvatarUrl ? (
-                <img src={myAvatarUrl} alt={user?.username} className="home-story-avatar" />
-              ) : (
-                <div className="home-story-placeholder">
-                  {user?.username ? user.username.slice(0, 2).toUpperCase() : 'ME'}
-                </div>
-              )}
-              <span className="my-story-add-badge">
-                <PlusIcon size={12} color="#ffffff" strokeWidth={3} />
-              </span>
-            </div>
-            <span className="home-story-username">You</span>
-          </div>
-
-          {/* Suggested & Trending Profiles */}
-          {suggestedProfiles.map((p) => {
-            const avatar = p.profile_picture ? getMediaUrl(p.profile_picture) : null;
-            return (
-              <Link
-                key={p.id}
-                to={`/profile/${p.username}`}
-                className="home-story-item"
-                title={`@${p.username} • ${p.role}`}
-              >
-                <div className="home-story-avatar-wrap">
-                  {avatar ? (
-                    <img src={avatar} alt={p.username} className="home-story-avatar" />
-                  ) : (
-                    <div className="home-story-placeholder">
-                      {p.username.slice(0, 2).toUpperCase()}
-                    </div>
-                  )}
-                  {p.is_verified && (
-                    <span className="home-story-verified">
-                      <CheckVerifiedIcon size={12} />
-                    </span>
-                  )}
-                </div>
-                <span className="home-story-username">{p.username}</span>
-              </Link>
-            );
-          })}
-        </div>
-      </section>
+      {/* 1. TOP STORIES SECTION (Active Stories from followed users & own story) */}
+      <StoryBar />
 
       {/* 2. ACTIVITY RADAR & QUICK ACTIONS BAR */}
       <section className="home-quick-hub glass-panel">

@@ -4,7 +4,7 @@ import { storiesAPI } from '../../services/api';
 import { StoryRing } from './StoryRing';
 import { StoryCreatorModal } from './StoryCreatorModal';
 import { StoryViewerModal } from './StoryViewerModal';
-import { PlusIcon, ChevronLeftIcon, ChevronRightIcon } from '../common/Icons';
+import { ChevronLeftIcon, ChevronRightIcon } from '../common/Icons';
 
 export const StoryBar = () => {
   const { user: currentUser, isAuthenticated } = useAuth();
@@ -37,40 +37,54 @@ export const StoryBar = () => {
   }, [isAuthenticated]);
 
   const handleOpenCreator = (e) => {
-    if (e) e.stopPropagation();
+    if (e && e.stopPropagation) e.stopPropagation();
     setCreatorOpen(true);
   };
 
-  const handleOpenViewer = (userIndex) => {
-    const group = storyGroups[userIndex];
-    if (!group || !group.stories || group.stories.length === 0) {
-      // If clicked on own card and no stories exist, open creator
-      if (group?.is_current_user) {
-        setCreatorOpen(true);
-      }
-      return;
+  // Only groups with at least 1 active story for the sequential viewer
+  const activeStoryGroups = storyGroups.filter((g) => g.stories && g.stories.length > 0);
+
+  const handleOpenOwnStory = () => {
+    const myGroup = storyGroups.find((g) => g.is_current_user);
+    if (myGroup && myGroup.stories && myGroup.stories.length > 0) {
+      // Find own index in activeStoryGroups
+      const ownIdx = activeStoryGroups.findIndex((g) => g.is_current_user);
+      setActiveUserIndex(ownIdx !== -1 ? ownIdx : 0);
+      setViewerOpen(true);
+    } else {
+      // If no active story, open creator
+      setCreatorOpen(true);
     }
-    setActiveUserIndex(userIndex);
-    setViewerOpen(true);
+  };
+
+  const handleOpenFollowedViewer = (userId) => {
+    const activeIdx = activeStoryGroups.findIndex((g) => g.user?.id === userId);
+    if (activeIdx !== -1) {
+      setActiveUserIndex(activeIdx);
+      setViewerOpen(true);
+    }
   };
 
   const handleStoryCreated = (newStory) => {
     fetchTray();
   };
 
-  const handleStoryDeleted = (storyId, userIndex, storyIndex) => {
+  const handleStoryDeleted = (storyId) => {
     fetchTray();
   };
 
-  const handleStoryViewed = (storyId, userIdx, storyIdx) => {
+  const handleStoryViewed = (storyId, activeIdx, storyIdx) => {
     // Optimistically mark story as viewed locally
     setStoryGroups((prev) => {
       const updated = [...prev];
-      if (updated[userIdx]?.stories?.[storyIdx]) {
-        updated[userIdx].stories[storyIdx].has_viewed = true;
-        // Check if all stories are now viewed
-        const allSeen = updated[userIdx].stories.every((s) => s.has_viewed);
-        updated[userIdx].has_unseen = !allSeen;
+      const targetGroup = activeStoryGroups[activeIdx];
+      if (!targetGroup) return prev;
+
+      const rawIdx = updated.findIndex((g) => g.user?.id === targetGroup.user?.id);
+      if (rawIdx !== -1 && updated[rawIdx]?.stories?.[storyIdx]) {
+        updated[rawIdx].stories[storyIdx].has_viewed = true;
+        const allSeen = updated[rawIdx].stories.every((s) => s.has_viewed);
+        updated[rawIdx].has_unseen = !allSeen;
       }
       return updated;
     });
@@ -87,6 +101,9 @@ export const StoryBar = () => {
   const myGroup = storyGroups.find((g) => g.is_current_user);
   const myStories = myGroup?.stories || [];
   const hasMyStories = myStories.length > 0;
+  const followedGroupsWithStories = storyGroups.filter(
+    (group) => !group.is_current_user && group.stories?.length > 0
+  );
 
   return (
     <div className="story-bar-wrapper glass-panel">
@@ -106,7 +123,8 @@ export const StoryBar = () => {
         <div className="story-bar-item story-bar-item-self">
           <div
             className="story-avatar-clickable"
-            onClick={() => (hasMyStories ? handleOpenViewer(0) : handleOpenCreator())}
+            onClick={handleOpenOwnStory}
+            title={hasMyStories ? 'View your story' : 'Add a story'}
           >
             <StoryRing
               user={currentUser}
@@ -115,42 +133,40 @@ export const StoryBar = () => {
               isOwn={true}
               showAddBadge={true}
               size="md"
+              onAddClick={handleOpenCreator}
             />
           </div>
-          <span className="story-bar-username">
-            {hasMyStories ? 'Your Story' : 'Add Story'}
+          <span className="story-bar-username" onClick={handleOpenOwnStory}>
+            Your Story
           </span>
         </div>
 
         {/* Followed Users with active stories */}
-        {storyGroups
-          .map((group, idx) => ({ group, originalIndex: idx }))
-          .filter(({ group }) => !group.is_current_user && group.stories?.length > 0)
-          .map(({ group, originalIndex }) => {
-            const user = group.user || {};
-            const isSeen = !group.has_unseen;
+        {followedGroupsWithStories.map((group) => {
+          const user = group.user || {};
+          const isSeen = !group.has_unseen;
 
-            return (
-              <div
-                key={user.id || originalIndex}
-                className="story-bar-item"
-                onClick={() => handleOpenViewer(originalIndex)}
-              >
-                <div className="story-avatar-clickable">
-                  <StoryRing
-                    user={user}
-                    hasStory={true}
-                    isSeen={isSeen}
-                    isOwn={false}
-                    size="md"
-                  />
-                </div>
-                <span className="story-bar-username" title={user.username}>
-                  {user.username}
-                </span>
+          return (
+            <div
+              key={user.id}
+              className="story-bar-item"
+              onClick={() => handleOpenFollowedViewer(user.id)}
+            >
+              <div className="story-avatar-clickable">
+                <StoryRing
+                  user={user}
+                  hasStory={true}
+                  isSeen={isSeen}
+                  isOwn={false}
+                  size="md"
+                />
               </div>
-            );
-          })}
+              <span className="story-bar-username" title={user.username}>
+                {user.username}
+              </span>
+            </div>
+          );
+        })}
       </div>
 
       {/* Scroll Right Button (Desktop) */}
@@ -173,9 +189,9 @@ export const StoryBar = () => {
       )}
 
       {/* Story Viewer Modal */}
-      {viewerOpen && (
+      {viewerOpen && activeStoryGroups.length > 0 && (
         <StoryViewerModal
-          storyGroups={storyGroups}
+          storyGroups={activeStoryGroups}
           initialUserIndex={activeUserIndex}
           isOpen={viewerOpen}
           onClose={() => setViewerOpen(false)}

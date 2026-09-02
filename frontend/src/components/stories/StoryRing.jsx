@@ -10,6 +10,7 @@ export const StoryRing = ({
   showAddBadge = false,
   size = 'md',
   onClick,
+  onAddClick,
   className = '',
 }) => {
   const avatarUrl = user?.profile_picture
@@ -23,8 +24,18 @@ export const StoryRing = ({
   // Determine ring styling class
   let ringClass = 'story-ring-none';
   if (hasStory) {
-    ringClass = isSeen ? 'story-ring-seen' : 'story-ring-unseen';
+    // If own active story or unseen story, show active ring; if seen, show subtle ring
+    ringClass = isOwn ? 'story-ring-unseen' : (isSeen ? 'story-ring-seen' : 'story-ring-unseen');
   }
+
+  const handleBadgeClick = (e) => {
+    e.stopPropagation();
+    if (onAddClick) {
+      onAddClick(e);
+    } else if (onClick) {
+      onClick(e);
+    }
+  };
 
   return (
     <div
@@ -68,7 +79,20 @@ export const StoryRing = ({
       </div>
 
       {showAddBadge && (
-        <div className="story-ring-add-badge" title="Add Story">
+        <div
+          className="story-ring-add-badge"
+          title="Add Story"
+          role="button"
+          tabIndex={0}
+          onClick={handleBadgeClick}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              handleBadgeClick(e);
+            }
+          }}
+          aria-label="Add new story"
+        >
           <PlusIcon size={12} color="#ffffff" strokeWidth={3} />
         </div>
       )}
