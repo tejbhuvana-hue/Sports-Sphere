@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { getMediaUrl } from '../../services/api';
@@ -8,11 +8,13 @@ import { PlusIcon, SunIcon, MoonIcon, BellIcon, CheckVerifiedIcon } from '../com
 export const MobileTopBar = ({ onOpenCreatePost }) => {
   const { user, unreadNotifications } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const location = useLocation();
+  const isFeedPage = location.pathname === '/feed';
 
   const avatarUrl = user?.profile?.profile_picture ? getMediaUrl(user.profile.profile_picture) : null;
 
   return (
-    <header className="mobile-topbar" id="mobile-topbar">
+    <header className={`mobile-topbar ${isFeedPage ? 'mobile-topbar-feed' : ''}`} id="mobile-topbar">
       {/* 1. SportsSphere Brand */}
       <Link to="/home" className="mobile-topbar-brand" title="SportsSphere Home">
         Sports<span className="brand-accent">Sphere</span>
@@ -20,28 +22,33 @@ export const MobileTopBar = ({ onOpenCreatePost }) => {
 
       {/* Action items on right side */}
       <div className="mobile-topbar-actions">
-        {/* Theme Toggle Icon (Moon for Light theme, Sun for Dark theme) */}
-        <button
-          type="button"
-          onClick={toggleTheme}
-          className="mobile-topbar-icon-btn mobile-theme-btn"
-          title={`Switch to ${theme === 'light' ? 'Dark' : 'Light'} Mode`}
-          aria-label="Toggle Theme"
-        >
-          {theme === 'light' ? <MoonIcon size={21} /> : <SunIcon size={21} />}
-        </button>
+        {/* On non-feed pages: show Theme Toggle and Plus Create Post */}
+        {!isFeedPage && (
+          <>
+            {/* Theme Toggle Icon (Moon for Light theme, Sun for Dark theme) */}
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="mobile-topbar-icon-btn mobile-theme-btn"
+              title={`Switch to ${theme === 'light' ? 'Dark' : 'Light'} Mode`}
+              aria-label="Toggle Theme"
+            >
+              {theme === 'light' ? <MoonIcon size={21} /> : <SunIcon size={21} />}
+            </button>
 
-        {/* 2. Plus Icon: Create Post */}
-        <button
-          type="button"
-          onClick={onOpenCreatePost}
-          className="mobile-topbar-icon-btn mobile-add-btn"
-          title="Create New Post"
-          aria-label="Create Post"
-          id="mobile-create-post-topbar-btn"
-        >
-          <PlusIcon size={23} strokeWidth={2.4} />
-        </button>
+            {/* 2. Plus Icon: Create Post */}
+            <button
+              type="button"
+              onClick={onOpenCreatePost}
+              className="mobile-topbar-icon-btn mobile-add-btn"
+              title="Create New Post"
+              aria-label="Create Post"
+              id="mobile-create-post-topbar-btn"
+            >
+              <PlusIcon size={23} strokeWidth={2.4} />
+            </button>
+          </>
+        )}
 
         {/* 3. Authenticated Username / Profile link */}
         {user && (

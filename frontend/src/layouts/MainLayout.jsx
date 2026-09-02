@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { Navbar } from '../components/Navbar';
 import { LeftSidebar } from '../components/LeftSidebar';
 import { RightSidebar } from '../components/RightSidebar';
@@ -12,6 +12,8 @@ export const MainLayout = ({ children, hideRightSidebar = false }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const [createPostOpen, setCreatePostOpen] = useState(false);
+  const location = useLocation();
+  const isFeedPage = location.pathname === '/feed';
 
   const handlePostCreated = (newPost) => {
     // Dispatch custom window event so FeedPage or ExplorePage can prepend new post
@@ -19,14 +21,14 @@ export const MainLayout = ({ children, hideRightSidebar = false }) => {
   };
 
   return (
-    <div className="app-container">
+    <div className={`app-container ${isFeedPage ? 'app-container-feed' : ''}`}>
       {/* Mobile Top Bar (visible on <= 768px) */}
       <MobileTopBar onOpenCreatePost={() => setCreatePostOpen(true)} />
 
       {/* Desktop Top Navbar (visible on > 768px) */}
       <Navbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
 
-      <div className="main-layout">
+      <div className={`main-layout ${isFeedPage ? 'main-layout-feed' : ''}`}>
         {/* Left Sidebar (Desktop fixed, Tablet drawer) */}
         <LeftSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
