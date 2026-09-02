@@ -3642,13 +3642,24 @@ img, video {
     margin: 0 !important;
   }
 
-  .main-layout.main-layout-feed,
-  .main-layout.main-layout-messages {
+  .main-layout.main-layout-feed {
     padding: 0 !important;
     margin: 0 !important;
     width: 100% !important;
     max-width: 100% !important;
     height: calc(100dvh - var(--mobile-bottomnav-height) - var(--safe-bottom)) !important;
+    overflow: hidden !important;
+  }
+
+  .main-layout.main-layout-messages {
+    padding: 0 !important;
+    margin: 0 !important;
+    padding-top: calc(var(--mobile-topbar-height) + var(--safe-top)) !important;
+    padding-bottom: calc(var(--mobile-bottomnav-height) + var(--safe-bottom)) !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100dvh !important;
+    box-sizing: border-box !important;
     overflow: hidden !important;
   }
 
@@ -4007,8 +4018,8 @@ img, video {
   /* Messaging Page Mobile */
   .messages-layout {
     display: block !important;
-    height: calc(100vh - var(--mobile-topbar-height) - var(--mobile-bottomnav-height) - var(--safe-top) - var(--safe-bottom)) !important;
-    height: calc(100dvh - var(--mobile-topbar-height) - var(--mobile-bottomnav-height) - var(--safe-top) - var(--safe-bottom)) !important;
+    height: 100% !important;
+    max-height: 100% !important;
     border-radius: 0 !important;
     border: none !important;
     margin: 0 !important;
@@ -5412,13 +5423,26 @@ img, video {
     overflow: hidden !important;
   }
 
+  .main-layout.main-layout-messages {
+    padding: 0 !important;
+    margin: 0 !important;
+    padding-top: calc(var(--mobile-topbar-height) + var(--safe-top)) !important;
+    padding-bottom: calc(var(--mobile-bottomnav-height) + var(--safe-bottom)) !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100dvh !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+  }
+
   .main-content {
     width: 100% !important;
     max-width: 100% !important;
     padding: 0 !important;
   }
 
-  .main-layout.main-layout-feed .main-content {
+  .main-layout.main-layout-feed .main-content,
+  .main-layout.main-layout-messages .main-content {
     padding: 0 !important;
     margin: 0 !important;
     width: 100% !important;
@@ -5742,8 +5766,8 @@ img, video {
   /* Messaging Page Mobile */
   .messages-layout {
     display: block !important;
-    height: calc(100vh - var(--mobile-topbar-height) - var(--mobile-bottomnav-height) - var(--safe-top) - var(--safe-bottom)) !important;
-    height: calc(100dvh - var(--mobile-topbar-height) - var(--mobile-bottomnav-height) - var(--safe-top) - var(--safe-bottom)) !important;
+    height: 100% !important;
+    max-height: 100% !important;
     border-radius: 0 !important;
     border: none !important;
     margin: 0 !important;
