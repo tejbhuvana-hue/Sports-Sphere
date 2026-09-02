@@ -3637,8 +3637,8 @@ img, video {
     max-width: 100% !important;
     padding-top: calc(var(--mobile-topbar-height) + var(--safe-top) + 10px) !important;
     padding-bottom: calc(var(--mobile-bottomnav-height) + var(--safe-bottom) + 20px) !important;
-    padding-left: 12px !important;
-    padding-right: 12px !important;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
     margin: 0 !important;
   }
 
@@ -4060,25 +4060,29 @@ img, video {
   .search-users-grid,
   .explore-users-grid {
     grid-template-columns: repeat(2, 1fr) !important;
-    gap: 10px !important;
+    gap: 12px !important;
+    width: 100% !important;
   }
 
   .search-user-card,
   .explore-user-card {
-    padding: 12px !important;
+    padding: 18px 12px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    min-height: 155px !important;
   }
 
   .search-user-avatar,
   .explore-user-avatar {
-    width: 48px !important;
-    height: 48px !important;
+    width: 56px !important;
+    height: 56px !important;
   }
 
   .search-user-avatar-placeholder,
   .explore-user-avatar-placeholder {
-    width: 48px !important;
-    height: 48px !important;
-    font-size: 1rem !important;
+    width: 56px !important;
+    height: 56px !important;
+    font-size: 1.1rem !important;
   }
 
   /* Tournaments & Recruitment & Sponsorships Mobile */
@@ -4270,15 +4274,18 @@ img, video {
    ------------------------------------------------------------ */
 .explore-container,
 .search-container {
-  max-width: 900px;
+  width: 100%;
+  max-width: 100%;
   margin: 0 auto;
 }
 
 .explore-search-panel,
 .search-header-panel {
-  padding: 22px;
+  padding: 24px 20px;
   margin-bottom: 24px;
   border-radius: var(--border-radius);
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .explore-page-title,
@@ -4317,6 +4324,7 @@ img, video {
   outline: none;
   font-family: inherit;
   transition: var(--transition);
+  box-sizing: border-box;
 }
 
 .explore-search-input:focus,
@@ -4341,6 +4349,7 @@ img, video {
   display: flex;
   gap: 10px;
   margin-bottom: 12px;
+  width: 100%;
 }
 
 .search-submit-btn {
@@ -4350,10 +4359,12 @@ img, video {
   flex-shrink: 0;
 }
 
-.search-filters-grid {
+.search-filters-grid,
+.search-filters-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 10px;
+  width: 100%;
 }
 
 .search-filter-select,
@@ -4367,6 +4378,7 @@ img, video {
   outline: none;
   font-size: 0.88rem;
   font-family: inherit;
+  box-sizing: border-box;
 }
 
 .search-filter-select option {
@@ -4377,34 +4389,40 @@ img, video {
 .explore-section,
 .search-section {
   margin-bottom: 32px;
+  width: 100%;
 }
 
 .explore-section-title,
 .search-section-title {
-  font-size: 1.15rem;
+  font-size: 1.2rem;
   font-weight: 800;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
   color: var(--text-primary);
 }
 
 .explore-users-grid,
 .search-users-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 16px;
+  width: 100%;
 }
 
 .explore-user-card,
 .search-user-card {
-  padding: 18px 14px;
+  padding: 20px 16px;
   text-align: center;
   text-decoration: none;
   color: inherit;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   border-radius: var(--border-radius);
   transition: var(--transition);
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 160px;
 }
 
 .explore-user-card:hover,
@@ -4415,17 +4433,17 @@ img, video {
 
 .explore-user-avatar,
 .search-user-avatar {
-  width: 58px;
-  height: 58px;
+  width: 62px;
+  height: 62px;
   border-radius: 50%;
   object-fit: cover;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .explore-user-avatar-placeholder,
 .search-user-avatar-placeholder {
-  width: 58px;
-  height: 58px;
+  width: 62px;
+  height: 62px;
   border-radius: 50%;
   background: var(--accent);
   color: var(--btn-primary-text);
@@ -4433,14 +4451,14 @@ img, video {
   align-items: center;
   justify-content: center;
   font-weight: 800;
-  font-size: 1.1rem;
-  margin-bottom: 10px;
+  font-size: 1.2rem;
+  margin-bottom: 12px;
 }
 
 .explore-user-name,
 .search-user-name {
   font-weight: 800;
-  font-size: 0.95rem;
+  font-size: 1rem;
   color: var(--text-primary);
   display: flex;
   align-items: center;
@@ -4449,16 +4467,18 @@ img, video {
 
 .explore-user-role,
 .search-user-role {
-  font-size: 0.78rem;
+  font-size: 0.82rem;
   color: var(--accent);
-  font-weight: 600;
-  margin-top: 2px;
+  font-weight: 700;
+  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .search-user-meta {
-  font-size: 0.75rem;
+  font-size: 0.78rem;
   color: var(--text-secondary);
-  margin-top: 2px;
+  margin-top: 4px;
 }
 
 .explore-posts-stream,
@@ -4466,7 +4486,15 @@ img, video {
 .profile-posts-stream {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
+  width: 100%;
+}
+
+.explore-posts-stream .post-card,
+.search-posts-stream .post-card {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
 }
 
 /* ------------------------------------------------------------
@@ -4880,8 +4908,8 @@ img, video {
     max-width: 100% !important;
     padding-top: calc(var(--mobile-topbar-height) + var(--safe-top) + 10px) !important;
     padding-bottom: calc(var(--mobile-bottomnav-height) + var(--safe-bottom) + 20px) !important;
-    padding-left: 12px !important;
-    padding-right: 12px !important;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
     margin: 0 !important;
   }
 
@@ -5279,25 +5307,29 @@ img, video {
   .search-users-grid,
   .explore-users-grid {
     grid-template-columns: repeat(2, 1fr) !important;
-    gap: 10px !important;
+    gap: 12px !important;
+    width: 100% !important;
   }
 
   .search-user-card,
   .explore-user-card {
-    padding: 12px !important;
+    padding: 18px 12px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    min-height: 155px !important;
   }
 
   .search-user-avatar,
   .explore-user-avatar {
-    width: 48px !important;
-    height: 48px !important;
+    width: 56px !important;
+    height: 56px !important;
   }
 
   .search-user-avatar-placeholder,
   .explore-user-avatar-placeholder {
-    width: 48px !important;
-    height: 48px !important;
-    font-size: 1rem !important;
+    width: 56px !important;
+    height: 56px !important;
+    font-size: 1.1rem !important;
   }
 
   /* Contact Page Mobile */
