@@ -6368,10 +6368,43 @@ img, video {
 .home-dashboard-container {
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  max-width: 820px;
-  margin: 0 auto;
-  padding-bottom: 40px;
+  gap: 16px;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: 0 0 40px 0;
+  box-sizing: border-box;
+}
+
+.home-feed-stream {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.home-feed-stream .feed-posts-stream {
+  width: 100% !important;
+  max-width: 100% !important;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-sizing: border-box !important;
+}
+
+.home-feed-stream .post-card {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+.home-dashboard-container .story-bar-wrapper {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
 }
 
 /* 1. Stories Carousel */
