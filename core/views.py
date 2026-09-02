@@ -437,6 +437,9 @@ class PostListCreateAPIView(APIView):
             posts = posts.filter(author__username__iexact=author_username)
         elif saved and request.user.is_authenticated:
             posts = posts.filter(saved_by=request.user)
+        elif request.user.is_authenticated:
+            # Feed excludes own posts so user only sees their own posts on their profile page
+            posts = posts.exclude(author=request.user)
 
         serializer = PostSerializer(posts, many=True, context={'request': request})
         return Response(serializer.data)
@@ -629,12 +632,16 @@ class ExploreAPIView(APIView):
                 Q(first_name__icontains=query) |
                 Q(last_name__icontains=query) |
                 Q(profile__sport__icontains=query)
-            ).select_related('profile')[:12]
+            ).select_related('profile')[:20]
 
-            posts = Post.objects.filter(content__icontains=query).select_related('author', 'author__profile')[:12]
+            posts = Post.objects.filter(
+                Q(content__icontains=query) |
+                Q(author__username__icontains=query) |
+                Q(author__profile__sport__icontains=query)
+            ).select_related('author', 'author__profile')[:24]
         else:
-            users = User.objects.all().select_related('profile')[:8]
-            posts = Post.objects.all().select_related('author', 'author__profile')[:8]
+            users = User.objects.all().select_related('profile')[:20]
+            posts = Post.objects.all().select_related('author', 'author__profile').order_by('-created_at')[:24]
 
         return Response({
             'query': query,

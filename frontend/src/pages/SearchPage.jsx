@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { exploreAPI, getMediaUrl } from '../services/api';
 import { PostCard } from '../components/PostCard';
-import { SearchIcon, TrophyIcon, MapPinIcon, CloseIcon } from '../components/common/Icons';
+import { PostDetailModal } from '../components/PostDetailModal';
+import { SearchIcon, TrophyIcon, MapPinIcon, CloseIcon, VideoIcon, FeedIcon, HeartIcon, CommentIcon } from '../components/common/Icons';
 
 export const SearchPage = () => {
   const location = useLocation();
@@ -16,6 +17,7 @@ export const SearchPage = () => {
   const [users, setUsers] = useState([]);
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedPost, setSelectedPost] = useState(null);
 
   const debounceTimerRef = useRef(null);
 
@@ -79,9 +81,6 @@ export const SearchPage = () => {
         <form onSubmit={handleSubmit} className="search-form-wrap">
           <div className="search-input-row">
             <div className="search-bar-inner">
-              <span className="search-icon-decor" style={{ color: 'var(--accent)', display: 'flex', alignItems: 'center' }}>
-                <SearchIcon size={18} />
-              </span>
               <input
                 type="text"
                 placeholder="Search athletes, coaches, clubs, sports..."
@@ -89,17 +88,21 @@ export const SearchPage = () => {
                 onChange={(e) => setQ(e.target.value)}
                 className="search-main-input"
               />
-              {q && (
-                <button
-                  type="button"
-                  onClick={() => setQ('')}
-                  className="search-clear-btn"
-                  aria-label="Clear search"
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                >
-                  <CloseIcon size={16} />
-                </button>
-              )}
+              <div className="search-actions-right">
+                {q && (
+                  <button
+                    type="button"
+                    onClick={() => setQ('')}
+                    className="search-clear-btn"
+                    aria-label="Clear search"
+                  >
+                    <CloseIcon size={16} />
+                  </button>
+                )}
+                <span className="search-icon-decor-right">
+                  <SearchIcon size={18} />
+                </span>
+              </div>
             </div>
             <button type="submit" className="btn btn-primary search-submit-btn">
               Search
@@ -189,7 +192,7 @@ export const SearchPage = () => {
         </section>
       )}
 
-      {/* Matching Posts */}
+      {/* Matching Posts Grid */}
       <section className="search-section">
         <h3 className="search-section-title">
           Posts ({posts.length})
@@ -197,10 +200,73 @@ export const SearchPage = () => {
         {loading ? (
           <div className="search-loading">Searching SportsSphere...</div>
         ) : posts.length > 0 ? (
-          <div className="search-posts-stream">
-            {posts.map((post) => (
-              <PostCard key={post.id} post={post} />
-            ))}
+          <div className="explore-3x3-grid">
+            {posts.map((post) => {
+              const imageUrl = post.image ? getMediaUrl(post.image) : null;
+              const videoUrl = post.video ? getMediaUrl(post.video) : null;
+              const likesCount = post.likes_count || (post.likes ? post.likes.length : 0);
+              const commentsCount = post.comments_count || (post.comments ? post.comments.length : 0);
+
+              return (
+                <div
+                  key={post.id}
+                  className="explore-grid-tile"
+                  onClick={() => setSelectedPost(post)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      setSelectedPost(post);
+                    }
+                  }}
+                >
+                  {imageUrl ? (
+                    <img
+                      src={imageUrl}
+                      alt="Post thumbnail"
+                      className="explore-grid-media"
+                      loading="lazy"
+                    />
+                  ) : videoUrl ? (
+                    <div className="explore-grid-video-wrap">
+                      <video
+                        src={videoUrl}
+                        className="explore-grid-media"
+                        muted
+                        playsInline
+                        preload="metadata"
+                      />
+                    </div>
+                  ) : (
+                    <div className="explore-grid-text-tile">
+                      <div className="explore-text-tile-icon">
+                        <FeedIcon size={24} />
+                      </div>
+                      <span className="explore-text-tile-author">
+                        @{post.author?.username || 'athlete'}
+                      </span>
+                    </div>
+                  )}
+
+                  {videoUrl && (
+                    <div className="explore-tile-video-badge">
+                      <VideoIcon size={14} />
+                    </div>
+                  )}
+
+                  <div className="explore-tile-overlay">
+                    <div className="explore-overlay-stat">
+                      <HeartIcon size={18} fill="currentColor" />
+                      <span>{likesCount}</span>
+                    </div>
+                    <div className="explore-overlay-stat">
+                      <CommentIcon size={18} fill="currentColor" />
+                      <span>{commentsCount}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         ) : users.length === 0 ? (
           <div className="glass-panel search-empty-card">
@@ -210,6 +276,21 @@ export const SearchPage = () => {
           </div>
         ) : null}
       </section>
+
+      {/* Post Modal */}
+      <PostDetailModal
+        post={selectedPost}
+        isOpen={Boolean(selectedPost)}
+        onClose={() => setSelectedPost(null)}
+        onPostDeleted={(id) => {
+          setPosts((prev) => prev.filter((p) => p.id !== id));
+          setSelectedPost(null);
+        }}
+        onPostUpdated={(updated) => {
+          setPosts((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+          setSelectedPost(updated);
+        }}
+      />
     </div>
   );
 };

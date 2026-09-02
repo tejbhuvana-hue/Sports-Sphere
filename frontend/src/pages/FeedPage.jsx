@@ -4,7 +4,7 @@ import { postsAPI, getMediaUrl } from '../services/api';
 import { PostCard } from '../components/PostCard';
 import { ReelSlide } from '../components/ReelSlide';
 import { StoryBar } from '../components/stories/StoryBar';
-import { CameraIcon, VideoIcon, FeedIcon, CloseIcon, PlusIcon, ZapIcon } from '../components/common/Icons';
+import { CameraIcon, VideoIcon, FeedIcon, CloseIcon, ZapIcon, CheckVerifiedIcon } from '../components/common/Icons';
 
 export const FeedPage = () => {
   const { user } = useAuth();
@@ -15,16 +15,26 @@ export const FeedPage = () => {
   const [videoFile, setVideoFile] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
   const [activeReelIndex, setActiveReelIndex] = useState(0);
   const [isMobileView, setIsMobileView] = useState(window.innerWidth <= 768);
   const [reelsMode, setReelsMode] = useState(true); // default reels mode on mobile
 
   const reelsContainerRef = useRef(null);
 
+  const filterOutOwnPosts = (postsList) => {
+    if (!postsList) return [];
+    if (!user) return postsList;
+    return postsList.filter(
+      (p) => p.author?.username !== user.username && p.author?.id !== user.id && !p.is_author
+    );
+  };
+
   const fetchPosts = async () => {
     try {
       const res = await postsAPI.getPosts();
-      setPosts(res.data || []);
+      const filtered = filterOutOwnPosts(res.data || []);
+      setPosts(filtered);
     } catch (err) {
       console.error('Failed to load posts', err);
     } finally {
@@ -44,8 +54,15 @@ export const FeedPage = () => {
     // Listen for new posts created globally via the MobileTopBar '+' modal
     const handleGlobalNewPost = (e) => {
       if (e.detail) {
-        setPosts((prev) => [e.detail, ...prev]);
-        setActiveReelIndex(0);
+        // Only append if not authored by the current logged-in user
+        const isOwn =
+          e.detail.author?.username === user?.username ||
+          e.detail.author?.id === user?.id ||
+          e.detail.is_author;
+        if (!isOwn) {
+          setPosts((prev) => [e.detail, ...prev]);
+          setActiveReelIndex(0);
+        }
       }
     };
 
@@ -54,7 +71,7 @@ export const FeedPage = () => {
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('sports_sphere_new_post', handleGlobalNewPost);
     };
-  }, []);
+  }, [user]);
 
   // Track active reel on scroll in reels mode and trigger infinite load
   useEffect(() => {
@@ -90,7 +107,7 @@ export const FeedPage = () => {
   // Keyboard navigation for reels (ArrowUp / ArrowDown)
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (!reelsMode || !isMobileView && !reelsMode) return;
+      if (!reelsMode || (!isMobileView && !reelsMode)) return;
       if (e.key === 'ArrowDown') {
         e.preventDefault();
         scrollToReel(activeReelIndex + 1);
@@ -112,7 +129,7 @@ export const FeedPage = () => {
     const height = container.clientHeight;
     container.scrollTo({
       top: index * height,
-      behavior: 'smooth'
+      behavior: 'smooth',
     });
     setActiveReelIndex(index);
   };
@@ -123,6 +140,7 @@ export const FeedPage = () => {
 
     setIsSubmitting(true);
     setError('');
+    setSuccessMsg('');
 
     try {
       const formData = new FormData();
@@ -130,12 +148,13 @@ export const FeedPage = () => {
       if (imageFile) formData.append('image', imageFile);
       if (videoFile) formData.append('video', videoFile);
 
-      const res = await postsAPI.createPost(formData);
-      setPosts([res.data, ...posts]);
+      await postsAPI.createPost(formData);
+      // Own post is not placed in the user's feed, only in their profile
       setContent('');
       setImageFile(null);
       setVideoFile(null);
-      setActiveReelIndex(0);
+      setSuccessMsg('Post published! Your post is visible to others in their feed, and you can view it anytime on your profile.');
+      setTimeout(() => setSuccessMsg(''), 6000);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to create post. Please try again.');
     } finally {
@@ -148,7 +167,9 @@ export const FeedPage = () => {
   };
 
   const handlePostUpdated = (updatedPost) => {
-    setPosts((prev) => prev.map((p) => (p.id === updatedPost.id || p.original_id === updatedPost.id ? updatedPost : p)));
+    setPosts((prev) =>
+      prev.map((p) => (p.id === updatedPost.id || p.original_id === updatedPost.id ? updatedPost : p))
+    );
   };
 
   const avatarUrl = user?.profile?.profile_picture ? getMediaUrl(user.profile.profile_picture) : null;
@@ -211,6 +232,11 @@ export const FeedPage = () => {
         {error && (
           <div className="alert-box alert-danger">
             {error}
+          </div>
+        )}
+        {successMsg && (
+          <div className="alert-box alert-success" style={{ background: 'rgba(0, 230, 118, 0.12)', border: '1px solid rgba(0, 230, 118, 0.3)', color: 'var(--text-primary)', padding: '10px 14px', borderRadius: '10px', marginBottom: '14px', fontSize: '0.88rem' }}>
+            ✓ {successMsg}
           </div>
         )}
         <form onSubmit={handleCreatePost}>

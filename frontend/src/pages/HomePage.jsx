@@ -51,8 +51,10 @@ export const HomePage = ({ onOpenCreatePost }) => {
       }
 
       if (postsRes.status === 'fulfilled') {
-        // Randomize/shuffle posts for dynamic discovery
-        const allPosts = postsRes.value.data || [];
+        // Randomize/shuffle posts for dynamic discovery, excluding own posts
+        const allPosts = (postsRes.value.data || []).filter(
+          (p) => p.author?.username !== user?.username && p.author?.id !== user?.id && !p.is_author
+        );
         const shuffled = [...allPosts].sort(() => 0.5 - Math.random());
         setDiscoverPosts(shuffled.slice(0, 8));
       }
