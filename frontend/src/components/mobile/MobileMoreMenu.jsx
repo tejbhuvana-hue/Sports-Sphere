@@ -160,14 +160,7 @@ export const MobileMoreMenu = ({ isOpen, onClose }) => {
           </div>
 
           <div className="mobile-drawer-section">
-            <span className="mobile-drawer-section-label">Explore & Support</span>
-
-            <NavLink to="/blogs" className="mobile-drawer-item" onClick={onClose}>
-              <div className="mobile-drawer-item-icon">
-                <NewspaperIcon size={18} />
-              </div>
-              <span className="mobile-drawer-item-label">Blogs & News</span>
-            </NavLink>
+            <span className="mobile-drawer-section-label">Preferences & Settings</span>
 
             <NavLink to="/notifications" className="mobile-drawer-item" onClick={onClose}>
               <div className="mobile-drawer-item-icon">
@@ -184,13 +177,6 @@ export const MobileMoreMenu = ({ isOpen, onClose }) => {
                 <SettingsIcon size={18} />
               </div>
               <span className="mobile-drawer-item-label">Settings</span>
-            </NavLink>
-
-            <NavLink to="/contact" className="mobile-drawer-item" onClick={onClose}>
-              <div className="mobile-drawer-item-icon">
-                <MessagesIcon size={18} />
-              </div>
-              <span className="mobile-drawer-item-label">Contact & Support</span>
             </NavLink>
 
             {isAdmin && (
