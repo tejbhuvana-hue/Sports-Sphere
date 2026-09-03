@@ -1,4 +1,6 @@
 import datetime
+import smtplib
+import socket
 from unittest.mock import patch
 from django.core import mail
 from django.contrib.auth import get_user_model
@@ -410,4 +412,46 @@ class RegistrationOTPAPITests(APITestCase):
             self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST, f"Accepted invalid email: {email}")
             self.assertIn('email', res.data.get('errors', {}))
             self.assertFalse(PendingRegistration.objects.filter(email=email).exists())
+
+    @patch('core.views.send_mail')
+    def test_request_otp_smtp_auth_error_handling(self, mock_send_mail):
+        """Test that an SMTP authentication error returns a 500 error with descriptive message."""
+        mock_send_mail.side_effect = smtplib.SMTPAuthenticationError(535, b'5.7.8 Username and Password not accepted')
+        response = self.client.post(self.request_otp_url, self.valid_payload)
+        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertIn('authentication error', response.data['error'])
+
+    @patch('core.views.send_mail')
+    def test_request_otp_timeout_error_handling(self, mock_send_mail):
+        """Test that a network/mail timeout returns a 504 Gateway Timeout."""
+        mock_send_mail.side_effect = socket.timeout("Connection timed out")
+        response = self.client.post(self.request_otp_url, self.valid_payload)
+        self.assertEqual(response.status_code, status.HTTP_504_GATEWAY_TIMEOUT)
+        self.assertIn('timed out', response.data['error'])
+
+    @patch('core.views.send_mail')
+    def test_request_otp_generic_smtp_error_handling(self, mock_send_mail):
+        """Test that a generic SMTP exception returns a 500 error."""
+        mock_send_mail.side_effect = smtplib.SMTPException("Mail server error")
+        response = self.client.post(self.request_otp_url, self.valid_payload)
+        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertIn('delivery error', response.data['error'])
+
+    @patch('core.views.send_mail')
+    def test_resend_otp_smtp_auth_error_handling(self, mock_send_mail):
+        """Test that resend OTP handles SMTP auth error appropriately."""
+        # Initial request succeeds
+        self.client.post(self.request_otp_url, self.valid_payload)
+
+        # Move cooldown past 60s
+        pending = PendingRegistration.objects.get(email='newathlete@example.com')
+        pending.last_sent_at = timezone.now() - datetime.timedelta(seconds=65)
+        pending.save()
+
+        # Resend fails with SMTP auth error
+        mock_send_mail.side_effect = smtplib.SMTPAuthenticationError(535, b'Authentication failed')
+        response = self.client.post(self.resend_otp_url, {'email': 'newathlete@example.com'})
+        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertIn('authentication error', response.data['error'])
+
 

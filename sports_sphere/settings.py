@@ -184,11 +184,44 @@ SECURE_HSTS_PRELOAD = True
 
 # Email Configuration (SMTP)
 EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
-EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com').strip()
 EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))
-EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True').lower() == 'true'
-EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', 'False').lower() == 'true'
+
+_raw_use_ssl = os.getenv('EMAIL_USE_SSL')
+_raw_use_tls = os.getenv('EMAIL_USE_TLS')
+
+if _raw_use_ssl is not None:
+    EMAIL_USE_SSL = _raw_use_ssl.lower() in ('true', '1', 'yes')
+else:
+    EMAIL_USE_SSL = (EMAIL_PORT == 465)
+
+if _raw_use_tls is not None:
+    EMAIL_USE_TLS = _raw_use_tls.lower() in ('true', '1', 'yes')
+else:
+    EMAIL_USE_TLS = (EMAIL_PORT == 587 and not EMAIL_USE_SSL)
+
+# Strictly enforce mutual exclusivity so Django EmailBackend never throws ValueError:
+if EMAIL_USE_SSL and EMAIL_USE_TLS:
+    if EMAIL_PORT == 465:
+        EMAIL_USE_TLS = False
+    else:
+        EMAIL_USE_SSL = False
+
 EMAIL_TIMEOUT = int(os.getenv('EMAIL_TIMEOUT', '10'))
-EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
-EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
-DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER or 'SportsSphere <noreply@sportssphere.com>')
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '').strip()
+
+# Sanitize EMAIL_HOST_PASSWORD: strip surrounding whitespace and handle 16-character space-separated Google App Passwords
+_raw_password = os.getenv('EMAIL_HOST_PASSWORD', '').strip()
+if 'smtp.gmail.com' in EMAIL_HOST.lower() and len(_raw_password.replace(' ', '')) == 16:
+    EMAIL_HOST_PASSWORD = _raw_password.replace(' ', '')
+else:
+    EMAIL_HOST_PASSWORD = _raw_password
+
+_raw_from = os.getenv('DEFAULT_FROM_EMAIL', '').strip()
+if _raw_from:
+    DEFAULT_FROM_EMAIL = _raw_from
+elif EMAIL_HOST_USER:
+    DEFAULT_FROM_EMAIL = f'SportsSphere <{EMAIL_HOST_USER}>'
+else:
+    DEFAULT_FROM_EMAIL = 'SportsSphere <noreply@sportssphere.com>'
+

@@ -12,6 +12,8 @@ from django.core.mail import send_mail
 from django.conf import settings
 import datetime
 import logging
+import smtplib
+import socket
 from itertools import combinations
 
 from .models import (
@@ -57,7 +59,7 @@ def send_registration_otp_email(email: str, otp: str, username: str):
         f"Best regards,\n"
         f"The SportsSphere Team"
     )
-    from_email = settings.DEFAULT_FROM_EMAIL
+    from_email = settings.DEFAULT_FROM_EMAIL or getattr(settings, 'EMAIL_HOST_USER', None) or 'SportsSphere <noreply@sportssphere.com>'
     send_mail(
         subject=subject,
         message=message,
@@ -123,9 +125,26 @@ class RegisterRequestOTPView(APIView):
 
         try:
             send_registration_otp_email(email=email, otp=raw_otp, username=username)
+        except smtplib.SMTPAuthenticationError as e:
+            logger.exception("SMTP Authentication error when sending OTP to %s: %s", email, e)
+            return Response({
+                'error': 'Email delivery failed due to mail server authentication error. Please contact the administrator.'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except (socket.timeout, TimeoutError) as e:
+            logger.exception("SMTP timeout when sending OTP to %s: %s", email, e)
+            return Response({
+                'error': 'Email delivery timed out while contacting mail server. Please try again shortly.'
+            }, status=status.HTTP_504_GATEWAY_TIMEOUT)
+        except smtplib.SMTPException as e:
+            logger.exception("SMTP delivery error when sending OTP to %s: %s", email, e)
+            return Response({
+                'error': 'Failed to send verification email due to a mail delivery error. Please try again later.'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         except Exception as e:
-            logger.error("Failed to send registration OTP email to %s: %s", email, e)
-            return Response({'error': 'Failed to send verification email. Please check the email address and try again.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.exception("Unexpected error sending registration OTP email to %s: %s", email, e)
+            return Response({
+                'error': 'Failed to send verification email. Please try again later.'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         return Response({
             'message': 'Verification code sent to your email.',
@@ -250,9 +269,26 @@ class RegisterResendOTPView(APIView):
 
         try:
             send_registration_otp_email(email=pending.email, otp=raw_otp, username=pending.username)
+        except smtplib.SMTPAuthenticationError as e:
+            logger.exception("SMTP Authentication error when resending OTP to %s: %s", pending.email, e)
+            return Response({
+                'error': 'Email delivery failed due to mail server authentication error. Please contact the administrator.'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except (socket.timeout, TimeoutError) as e:
+            logger.exception("SMTP timeout when resending OTP to %s: %s", pending.email, e)
+            return Response({
+                'error': 'Email delivery timed out while contacting mail server. Please try again shortly.'
+            }, status=status.HTTP_504_GATEWAY_TIMEOUT)
+        except smtplib.SMTPException as e:
+            logger.exception("SMTP delivery error when resending OTP to %s: %s", pending.email, e)
+            return Response({
+                'error': 'Failed to send verification email due to a mail delivery error. Please try again later.'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         except Exception as e:
-            logger.error("Failed to resend registration OTP email to %s: %s", pending.email, e)
-            return Response({'error': 'Failed to send verification email. Please try again later.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.exception("Unexpected error resending registration OTP email to %s: %s", pending.email, e)
+            return Response({
+                'error': 'Failed to send verification email. Please try again later.'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         return Response({
             'message': 'A new verification code has been sent to your email.',
