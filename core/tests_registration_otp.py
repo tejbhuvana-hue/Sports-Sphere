@@ -342,3 +342,72 @@ class RegistrationOTPAPITests(APITestCase):
         self.assertIn('already exists', response.data['error'])
         # PendingRegistration should be cleaned up
         self.assertFalse(PendingRegistration.objects.filter(email='newathlete@example.com').exists())
+
+    def test_request_otp_various_valid_email_formats(self):
+        """Test that various valid email formats and non-Gmail domains are accepted."""
+        valid_emails = [
+            'test@gmail.com',
+            'user.name@gmail.com',
+            'user123@gmail.com',
+            'first.last@outlook.com',
+            'user@yahoo.com',
+            'player@domain.co.uk',
+        ]
+        for idx, email in enumerate(valid_emails):
+            payload = {
+                'username': f'validuser{idx}',
+                'email': email,
+                'password': 'SecurePassword123!',
+                'role': User.Role.PLAYER
+            }
+            res = self.client.post(self.request_otp_url, payload)
+            self.assertEqual(res.status_code, status.HTTP_200_OK, f"Failed for valid email: {email}")
+            self.assertEqual(res.data['email'], email.lower().strip())
+            self.assertTrue(PendingRegistration.objects.filter(email=email.lower().strip()).exists())
+
+    def test_request_otp_uppercase_and_whitespace_normalized(self):
+        """Test that uppercase letters and accidental leading/trailing spaces are normalized."""
+        payload_upper = {
+            'username': 'upperuser',
+            'email': 'USER@GMAIL.COM',
+            'password': 'SecurePassword123!',
+            'role': User.Role.PLAYER
+        }
+        res_upper = self.client.post(self.request_otp_url, payload_upper)
+        self.assertEqual(res_upper.status_code, status.HTTP_200_OK)
+        self.assertEqual(res_upper.data['email'], 'user@gmail.com')
+        self.assertTrue(PendingRegistration.objects.filter(email='user@gmail.com').exists())
+
+        payload_spaces = {
+            'username': 'spaceduser',
+            'email': '  spaced@outlook.com  ',
+            'password': 'SecurePassword123!',
+            'role': User.Role.PLAYER
+        }
+        res_spaces = self.client.post(self.request_otp_url, payload_spaces)
+        self.assertEqual(res_spaces.status_code, status.HTTP_200_OK)
+        self.assertEqual(res_spaces.data['email'], 'spaced@outlook.com')
+        self.assertTrue(PendingRegistration.objects.filter(email='spaced@outlook.com').exists())
+
+    def test_request_otp_invalid_email_formats_rejected(self):
+        """Test that clearly invalid email formats are rejected with HTTP 400."""
+        invalid_emails = [
+            'user@gmail',
+            'user@',
+            '@gmail.com',
+            'plainaddress',
+            'user@.com',
+            'user@domain..com',
+        ]
+        for email in invalid_emails:
+            payload = {
+                'username': 'invaliduser',
+                'email': email,
+                'password': 'SecurePassword123!',
+                'role': User.Role.PLAYER
+            }
+            res = self.client.post(self.request_otp_url, payload)
+            self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST, f"Accepted invalid email: {email}")
+            self.assertIn('email', res.data.get('errors', {}))
+            self.assertFalse(PendingRegistration.objects.filter(email=email).exists())
+

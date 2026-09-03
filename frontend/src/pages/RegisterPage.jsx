@@ -80,6 +80,13 @@ export const RegisterPage = () => {
         const val = err.response.data.errors[firstKey];
         return Array.isArray(val) ? val[0] : String(val);
       }
+      if (typeof err.response.data === 'object') {
+        const firstKey = Object.keys(err.response.data)[0];
+        if (firstKey) {
+          const val = err.response.data[firstKey];
+          return Array.isArray(val) ? val[0] : String(val);
+        }
+      }
     }
     if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
       return 'Request timed out. Please verify your connection and try again.';
@@ -95,6 +102,26 @@ export const RegisterPage = () => {
     setError('');
     setInfoMessage('');
 
+    const trimmedUsername = formData.username.trim();
+    const trimmedEmail = formData.email.trim();
+
+    if (!trimmedUsername) {
+      setError('Username is required.');
+      return;
+    }
+
+    if (!trimmedEmail) {
+      setError('Email address is required.');
+      return;
+    }
+
+    // Standard email validation pattern: allows any valid domain, rejects missing user/domain/TLD
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      setError('Please enter a valid email address.');
+      return;
+    }
+
     if (formData.password !== formData.confirm_password) {
       setError('Passwords do not match.');
       return;
@@ -105,15 +132,22 @@ export const RegisterPage = () => {
       return;
     }
 
+    const normalizedEmail = trimmedEmail.toLowerCase();
+
     setIsSubmitting(true);
     try {
       const res = await authAPI.requestRegistrationOTP({
-        username: formData.username.trim(),
-        email: formData.email.trim(),
+        username: trimmedUsername,
+        email: normalizedEmail,
         role: formData.role,
         password: formData.password,
       });
 
+      setFormData((prev) => ({
+        ...prev,
+        username: trimmedUsername,
+        email: normalizedEmail,
+      }));
       setStep('OTP');
       setOtp('');
       setError('');
@@ -145,7 +179,7 @@ export const RegisterPage = () => {
 
     try {
       const res = await authAPI.verifyRegistrationOTP({
-        email: formData.email.trim(),
+        email: formData.email.trim().toLowerCase(),
         otp: otp.trim(),
       });
 
@@ -170,7 +204,7 @@ export const RegisterPage = () => {
 
     try {
       const res = await authAPI.resendRegistrationOTP({
-        email: formData.email.trim(),
+        email: formData.email.trim().toLowerCase(),
       });
 
       setResendCooldown(60);
