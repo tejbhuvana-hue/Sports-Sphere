@@ -7,7 +7,7 @@ export const PublicLayout = () => {
   return (
     <div className="app-container">
       <PublicNavbar />
-      <div className="public-layout" style={{ paddingTop: '70px' }}>
+      <div className="public-layout" style={{ paddingTop: 'calc(70px + var(--safe-top))' }}>
         <Outlet />
       </div>
       <Footer />

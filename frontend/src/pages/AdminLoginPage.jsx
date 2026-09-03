@@ -39,7 +39,7 @@ export const AdminLoginPage = () => {
       background: '#060e1a',
       color: '#f0f6fc',
       fontFamily: 'Outfit, sans-serif',
-      padding: '20px'
+      padding: 'calc(20px + var(--safe-top)) calc(20px + var(--safe-right)) calc(20px + var(--safe-bottom)) calc(20px + var(--safe-left))'
     }}>
       <div style={{
         maxWidth: '440px',

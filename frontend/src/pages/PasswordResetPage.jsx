@@ -25,7 +25,7 @@ export const PasswordResetPage = () => {
 
   return (
     <div style={{
-      minHeight: 'calc(100vh - 70px)',
+      minHeight: 'calc(100vh - 70px - var(--safe-top))',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
