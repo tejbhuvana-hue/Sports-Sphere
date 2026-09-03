@@ -7599,31 +7599,54 @@ img, video {
 }
 
 /* In-Reel Comments Bottom Sheet Drawer */
+/* In-Reel Comments Bottom Sheet Drawer */
 .reel-comments-overlay {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--mobile-bottomnav-height) + var(--safe-bottom));
   background: rgba(0, 0, 0, 0.65);
   backdrop-filter: blur(6px);
-  z-index: 100;
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 950;
   display: flex;
   align-items: flex-end;
   justify-content: center;
   animation: fadeIn 0.2s ease;
 }
+
+@media (min-width: 769px) {
+  .reel-comments-overlay {
+    bottom: 0;
+    align-items: center;
+    padding: 20px;
+  }
+}
+
 .reel-comments-sheet {
   width: 100%;
   max-width: 500px;
-  max-height: 70vh;
+  max-height: calc(100% - 20px);
   background: var(--card-bg);
   border: var(--modal-content-border);
   border-top-left-radius: 20px;
   border-top-right-radius: 20px;
+  border-bottom: 1px solid var(--border-subtle);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  box-shadow: 0 -10px 40px rgba(0,0,0,0.5);
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.5);
   animation: slideUpSheet 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
+
+@media (min-width: 769px) {
+  .reel-comments-sheet {
+    border-radius: 20px;
+    max-height: 75vh;
+  }
+}
+
 @keyframes slideUpSheet {
   from { transform: translateY(100%); }
   to { transform: translateY(0); }
@@ -7635,6 +7658,7 @@ img, video {
   display: flex;
   flex-direction: column;
   align-items: center;
+  flex-shrink: 0;
 }
 .reel-comments-handle {
   width: 40px;
@@ -7667,12 +7691,15 @@ img, video {
 }
 
 .reel-comments-list {
-  flex: 1;
+  flex: 1 1 auto;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 14px;
+  min-height: 80px;
 }
 .reel-comment-item {
   display: flex;
@@ -7748,10 +7775,12 @@ img, video {
 
 .reel-comment-form {
   display: flex;
+  align-items: center;
   gap: 8px;
   padding: 12px 16px;
   border-top: 1px solid var(--border-subtle);
   background: var(--card-bg);
+  flex-shrink: 0;
 }
 .reel-comment-input {
   flex: 1;
@@ -7772,6 +7801,7 @@ img, video {
   font-size: 0.85rem;
   font-weight: 700;
   cursor: pointer;
+  white-space: nowrap;
 }
 /* ============================================================
    SHARE TO DIRECT MESSAGES MODAL (Instagram Style)
