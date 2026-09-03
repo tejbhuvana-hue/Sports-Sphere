@@ -1,3 +1,4 @@
+
 # SportsSphere — Unified Sports Networking & Management Platform
 
 SportsSphere is a sports networking platform connecting Athletes, Coaches, Clubs, Associations, Sponsors, and Scouts.
