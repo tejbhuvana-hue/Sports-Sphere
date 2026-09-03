@@ -604,3 +604,59 @@ class DeviceTokenSerializer(serializers.ModelSerializer):
         if not value or not value.strip():
             raise serializers.ValidationError("Device token cannot be empty.")
         return value.strip()
+
+
+class RegisterRequestOTPSerializer(serializers.Serializer):
+    username = serializers.CharField(max_length=150, trim_whitespace=True)
+    email = serializers.EmailField(trim_whitespace=True)
+    password = serializers.CharField(write_only=True, trim_whitespace=True)
+    role = serializers.ChoiceField(choices=User.Role.choices, default=User.Role.PLAYER)
+
+    def validate_username(self, value):
+        value = value.strip()
+        if not value:
+            raise serializers.ValidationError("Username is required.")
+        if User.objects.filter(username__iexact=value).exists():
+            raise serializers.ValidationError("A user with that username already exists.")
+        return value
+
+    def validate_email(self, value):
+        value = value.strip().lower()
+        if not value:
+            raise serializers.ValidationError("Email is required.")
+        if User.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError("A user with that email already exists.")
+        return value
+
+    def validate_password(self, value):
+        value = value.strip()
+        if not value:
+            raise serializers.ValidationError("Password is required.")
+        return value
+
+
+class RegisterVerifyOTPSerializer(serializers.Serializer):
+    email = serializers.EmailField(trim_whitespace=True)
+    otp = serializers.CharField(max_length=10, trim_whitespace=True)
+
+    def validate_email(self, value):
+        value = value.strip().lower()
+        if not value:
+            raise serializers.ValidationError("Email is required.")
+        return value
+
+    def validate_otp(self, value):
+        value = value.strip()
+        if not value:
+            raise serializers.ValidationError("OTP is required.")
+        return value
+
+
+class RegisterResendOTPSerializer(serializers.Serializer):
+    email = serializers.EmailField(trim_whitespace=True)
+
+    def validate_email(self, value):
+        value = value.strip().lower()
+        if not value:
+            raise serializers.ValidationError("Email is required.")
+        return value

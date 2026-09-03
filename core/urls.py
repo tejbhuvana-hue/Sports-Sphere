@@ -4,6 +4,9 @@ from . import views
 urlpatterns = [
     # Authentication
     path('auth/register/', views.RegisterAPIView.as_view(), name='api_register'),
+    path('auth/register/request-otp/', views.RegisterRequestOTPView.as_view(), name='api_register_request_otp'),
+    path('auth/register/verify-otp/', views.RegisterVerifyOTPView.as_view(), name='api_register_verify_otp'),
+    path('auth/register/resend-otp/', views.RegisterResendOTPView.as_view(), name='api_register_resend_otp'),
     path('auth/login/', views.LoginAPIView.as_view(), name='api_login'),
     path('auth/google/', views.GoogleAuthAPIView.as_view(), name='api_google_auth'),
     path('auth/logout/', views.LogoutAPIView.as_view(), name='api_logout'),

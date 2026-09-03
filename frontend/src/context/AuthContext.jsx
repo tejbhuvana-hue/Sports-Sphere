@@ -64,6 +64,15 @@ export const AuthProvider = ({ children }) => {
     return userData;
   };
 
+  const completeRegistration = async (authToken, userData) => {
+    setToken(authToken);
+    setUser(userData);
+    localStorage.setItem('token', authToken);
+    localStorage.setItem('user', JSON.stringify(userData));
+    await fetchCurrentUser();
+    return userData;
+  };
+
   const loginWithGoogle = async (idToken, role = 'PLAYER') => {
     const res = await authAPI.googleAuth({ id_token: idToken, role });
     const { token: authToken, user: userData } = res.data;
@@ -116,6 +125,7 @@ export const AuthProvider = ({ children }) => {
         setUnreadMessages,
         login,
         register,
+        completeRegistration,
         loginWithGoogle,
         logout,
         refreshUser,

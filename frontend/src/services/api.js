@@ -49,6 +49,12 @@ export const getMediaUrl = (path) => {
 // API Methods
 export const authAPI = {
   register: (data) => api.post("/auth/register/", data),
+  requestRegistrationOTP: (data) =>
+    api.post("/auth/register/request-otp/", data),
+  verifyRegistrationOTP: (data) =>
+    api.post("/auth/register/verify-otp/", data),
+  resendRegistrationOTP: (data) =>
+    api.post("/auth/register/resend-otp/", data),
   login: (data) => api.post("/auth/login/", data),
   googleAuth: (data) => api.post("/auth/google/", data),
   logout: (fcmToken) =>

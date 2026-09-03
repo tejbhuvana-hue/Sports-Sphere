@@ -3,6 +3,10 @@ from django.contrib.auth.models import AbstractUser
 from django.conf import settings
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.utils import timezone
+from django.contrib.auth.hashers import make_password, check_password
+import datetime
+import secrets
 
 class User(AbstractUser):
     class Role(models.TextChoices):
@@ -728,6 +732,56 @@ class DeviceToken(models.Model):
     def __str__(self):
         token_preview = self.token[:20] + '...' if len(self.token) > 20 else self.token
         return f"{self.user.username} - {token_preview}"
+
+
+class PendingRegistration(models.Model):
+    email = models.EmailField(unique=True, db_index=True)
+    username = models.CharField(max_length=150)
+    password = models.CharField(max_length=255)  # Securely hashed password
+    role = models.CharField(
+        max_length=20,
+        choices=User.Role.choices,
+        default=User.Role.PLAYER
+    )
+    otp_hash = models.CharField(max_length=255)
+    attempts = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    expires_at = models.DateTimeField()
+    last_sent_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"PendingRegistration({self.email}, {self.username})"
+
+    @classmethod
+    def generate_otp(cls) -> str:
+        """Generates a cryptographically secure 6-digit OTP."""
+        return f"{secrets.randbelow(1000000):06d}"
+
+    def set_otp(self, raw_otp: str):
+        """Hashes OTP, resets attempts and updates expiration (10 min) and last sent timestamp."""
+        self.otp_hash = make_password(raw_otp)
+        self.attempts = 0
+        self.expires_at = timezone.now() + datetime.timedelta(minutes=10)
+        self.last_sent_at = timezone.now()
+
+    def check_otp(self, raw_otp: str) -> bool:
+        """Verifies raw OTP against stored hash."""
+        return check_password(raw_otp, self.otp_hash)
+
+    def is_expired(self) -> bool:
+        return timezone.now() > self.expires_at
+
+    def is_exhausted(self) -> bool:
+        return self.attempts >= 5
+
+    def cooldown_seconds_remaining(self) -> int:
+        elapsed = (timezone.now() - self.last_sent_at).total_seconds()
+        remaining = 60 - int(elapsed)
+        return max(0, remaining)
 
 
 

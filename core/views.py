@@ -3,9 +3,13 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate, get_user_model
+from django.contrib.auth.hashers import make_password
 from django.shortcuts import get_object_or_404
+from django.db import transaction
 from django.db.models import Count, Q
 from django.utils.text import slugify
+from django.core.mail import send_mail
+from django.conf import settings
 import datetime
 import logging
 from itertools import combinations
@@ -16,7 +20,7 @@ from .models import (
     SponsorshipOpportunity, SponsorshipApplication,
     ResumeExperience, ResumeAchievement, ResumeCertificate, ResumeStatistic,
     Endorsement, Recommendation, ContactMessage, Blog, Story, StoryView,
-    DeviceToken
+    DeviceToken, PendingRegistration
 )
 from .serializers import (
     UserSerializer, UserSummarySerializer, ProfileSerializer,
@@ -30,7 +34,8 @@ from .serializers import (
     EndorsementSerializer, RecommendationSerializer,
     BlogSerializer, ContactMessageSerializer, AdminUserUpdateSerializer,
     StorySerializer, StoryViewSerializer, StoryTrayGroupSerializer,
-    DeviceTokenSerializer
+    DeviceTokenSerializer,
+    RegisterRequestOTPSerializer, RegisterVerifyOTPSerializer, RegisterResendOTPSerializer
 )
 from django.utils import timezone
 
@@ -41,6 +46,220 @@ logger = logging.getLogger(__name__)
 # ==========================================
 # AUTHENTICATION APIS
 # ==========================================
+
+def send_registration_otp_email(email: str, otp: str, username: str):
+    """Sends a 6-digit registration verification OTP via Django send_mail()."""
+    subject = "Your SportsSphere Verification Code"
+    message = (
+        f"Hello {username},\n\n"
+        f"Your verification code for SportsSphere is: {otp}\n\n"
+        f"This code will expire in 10 minutes. If you did not request this code, please ignore this email.\n\n"
+        f"Best regards,\n"
+        f"The SportsSphere Team"
+    )
+    from_email = settings.DEFAULT_FROM_EMAIL
+    send_mail(
+        subject=subject,
+        message=message,
+        from_email=from_email,
+        recipient_list=[email],
+        fail_silently=False,
+    )
+
+
+class RegisterRequestOTPView(APIView):
+    """
+    POST /api/auth/register/request-otp/
+    Validates registration data, creates/updates PendingRegistration, and sends 6-digit OTP email.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        serializer = RegisterRequestOTPSerializer(data=request.data)
+        if not serializer.is_valid():
+            first_error = next(iter(serializer.errors.values()))
+            error_msg = first_error[0] if isinstance(first_error, list) else str(first_error)
+            return Response({'error': error_msg, 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+        username = serializer.validated_data['username']
+        email = serializer.validated_data['email']
+        password = serializer.validated_data['password']
+        role = serializer.validated_data['role']
+
+        # Check existing active pending registration for cooldown
+        pending = PendingRegistration.objects.filter(email__iexact=email).first()
+        if pending and not pending.is_expired():
+            cooldown_left = pending.cooldown_seconds_remaining()
+            if cooldown_left > 0:
+                return Response({
+                    'error': f'Please wait {cooldown_left} seconds before requesting a new OTP.',
+                    'cooldown_remaining': cooldown_left
+                }, status=status.HTTP_429_TOO_MANY_REQUESTS)
+
+        # Clean up expired pending records
+        PendingRegistration.objects.filter(expires_at__lt=timezone.now()).delete()
+
+        # Generate cryptographically secure OTP & hash it
+        raw_otp = PendingRegistration.generate_otp()
+        hashed_otp = make_password(raw_otp)
+        hashed_password = make_password(password)
+
+        now = timezone.now()
+        expires_at = now + datetime.timedelta(minutes=10)
+
+        # Store or update pending registration
+        PendingRegistration.objects.update_or_create(
+            email=email,
+            defaults={
+                'username': username,
+                'password': hashed_password,
+                'role': role,
+                'otp_hash': hashed_otp,
+                'attempts': 0,
+                'expires_at': expires_at,
+                'last_sent_at': now,
+            }
+        )
+
+        try:
+            send_registration_otp_email(email=email, otp=raw_otp, username=username)
+        except Exception as e:
+            logger.error("Failed to send registration OTP email to %s: %s", email, e)
+            return Response({'error': 'Failed to send verification email. Please check the email address and try again.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return Response({
+            'message': 'Verification code sent to your email.',
+            'email': email,
+            'expires_in': 600
+        }, status=status.HTTP_200_OK)
+
+
+class RegisterVerifyOTPView(APIView):
+    """
+    POST /api/auth/register/verify-otp/
+    Verifies 6-digit OTP, creates User and Token within atomic transaction upon success.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        serializer = RegisterVerifyOTPSerializer(data=request.data)
+        if not serializer.is_valid():
+            first_error = next(iter(serializer.errors.values()))
+            error_msg = first_error[0] if isinstance(first_error, list) else str(first_error)
+            return Response({'error': error_msg, 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+        email = serializer.validated_data['email']
+        otp = serializer.validated_data['otp']
+
+        with transaction.atomic():
+            pending = PendingRegistration.objects.select_for_update().filter(email__iexact=email).first()
+
+            if not pending:
+                return Response({'error': 'No pending registration found for this email. Please request a new OTP.'}, status=status.HTTP_404_NOT_FOUND)
+
+            if pending.is_expired():
+                pending.delete()
+                return Response({'error': 'OTP has expired. Please request a new OTP.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            if pending.is_exhausted():
+                pending.delete()
+                return Response({'error': 'Maximum verification attempts exceeded. Please request a new OTP.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            if not pending.check_otp(otp):
+                pending.attempts += 1
+                if pending.attempts >= 5:
+                    pending.delete()
+                    return Response({'error': 'Maximum verification attempts exceeded. Please request a new OTP.'}, status=status.HTTP_400_BAD_REQUEST)
+                else:
+                    pending.save(update_fields=['attempts'])
+                    remaining_attempts = 5 - pending.attempts
+                    return Response({
+                        'error': f'Invalid verification code. {remaining_attempts} attempt{"s" if remaining_attempts != 1 else ""} remaining.',
+                        'remaining_attempts': remaining_attempts
+                    }, status=status.HTTP_400_BAD_REQUEST)
+
+            # OTP is valid! Check race condition for existing user
+            if User.objects.filter(email__iexact=pending.email).exists():
+                pending.delete()
+                return Response({'error': 'A user with that email already exists.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            if User.objects.filter(username__iexact=pending.username).exists():
+                pending.delete()
+                return Response({'error': 'A user with that username already exists.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Create User model instance with pre-hashed password
+            user = User(
+                username=pending.username,
+                email=pending.email,
+                role=pending.role,
+                password=pending.password,
+                is_verified=True,
+            )
+            user.save()
+
+            # DRF token
+            token, _ = Token.objects.get_or_create(user=user)
+
+            # Delete pending registration record
+            pending.delete()
+
+            user_data = UserSerializer(user, context={'request': request}).data
+
+            return Response({
+                'token': token.key,
+                'user': user_data,
+                'message': f"Welcome to SportsSphere, {user.username}!"
+            }, status=status.HTTP_201_CREATED)
+
+
+class RegisterResendOTPView(APIView):
+    """
+    POST /api/auth/register/resend-otp/
+    Resends a new 6-digit OTP for an active pending registration subject to 60s cooldown.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        serializer = RegisterResendOTPSerializer(data=request.data)
+        if not serializer.is_valid():
+            first_error = next(iter(serializer.errors.values()))
+            error_msg = first_error[0] if isinstance(first_error, list) else str(first_error)
+            return Response({'error': error_msg, 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+        email = serializer.validated_data['email']
+
+        pending = PendingRegistration.objects.filter(email__iexact=email).first()
+        if not pending:
+            return Response({'error': 'No pending registration found for this email. Please start registration again.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if pending.is_expired():
+            pending.delete()
+            return Response({'error': 'Registration session expired. Please start registration again.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        cooldown_left = pending.cooldown_seconds_remaining()
+        if cooldown_left > 0:
+            return Response({
+                'error': f'Please wait {cooldown_left} seconds before requesting a new OTP.',
+                'cooldown_remaining': cooldown_left
+            }, status=status.HTTP_429_TOO_MANY_REQUESTS)
+
+        # Generate new OTP, replace hash, reset attempts, reset 10m expiry, update last_sent_at
+        raw_otp = PendingRegistration.generate_otp()
+        pending.set_otp(raw_otp)
+        pending.save(update_fields=['otp_hash', 'attempts', 'expires_at', 'last_sent_at'])
+
+        try:
+            send_registration_otp_email(email=pending.email, otp=raw_otp, username=pending.username)
+        except Exception as e:
+            logger.error("Failed to resend registration OTP email to %s: %s", pending.email, e)
+            return Response({'error': 'Failed to send verification email. Please try again later.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return Response({
+            'message': 'A new verification code has been sent to your email.',
+            'email': pending.email,
+            'expires_in': 600
+        }, status=status.HTTP_200_OK)
+
 
 class RegisterAPIView(APIView):
     permission_classes = [permissions.AllowAny]
