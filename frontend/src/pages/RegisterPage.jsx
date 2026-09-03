@@ -61,6 +61,35 @@ export const RegisterPage = () => {
     return `${local.charAt(0)}***${local.slice(-1)}@${domain}`;
   };
 
+  const extractErrorMessage = (err, defaultMsg) => {
+    if (err.response?.data) {
+      if (typeof err.response.data === 'string') {
+        if (err.response.data.includes('<html') || err.response.status >= 500) {
+          return 'The email service is currently unavailable. Please verify your connection or try again shortly.';
+        }
+        return err.response.data;
+      }
+      if (err.response.data.error) {
+        return err.response.data.error;
+      }
+      if (err.response.data.detail) {
+        return err.response.data.detail;
+      }
+      if (err.response.data.errors && typeof err.response.data.errors === 'object') {
+        const firstKey = Object.keys(err.response.data.errors)[0];
+        const val = err.response.data.errors[firstKey];
+        return Array.isArray(val) ? val[0] : String(val);
+      }
+    }
+    if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
+      return 'Request timed out. Please verify your connection and try again.';
+    }
+    if (err.message && !err.response) {
+      return 'Unable to reach the server. Please check your internet connection.';
+    }
+    return defaultMsg;
+  };
+
   const handleFormSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -92,8 +121,7 @@ export const RegisterPage = () => {
       setResendCooldown(60);
     } catch (err) {
       setError(
-        err.response?.data?.error ||
-        'Registration failed. Please check your inputs.'
+        extractErrorMessage(err, 'Registration failed. Please check your inputs.')
       );
     } finally {
       setIsSubmitting(false);
@@ -126,8 +154,7 @@ export const RegisterPage = () => {
       navigate('/feed');
     } catch (err) {
       setError(
-        err.response?.data?.error ||
-        'Verification failed. Please check the code and try again.'
+        extractErrorMessage(err, 'Verification failed. Please check the code and try again.')
       );
     } finally {
       setIsSubmitting(false);
@@ -153,8 +180,7 @@ export const RegisterPage = () => {
         setResendCooldown(err.response.data.cooldown_remaining);
       }
       setError(
-        err.response?.data?.error ||
-        'Failed to resend verification code. Please try again later.'
+        extractErrorMessage(err, 'Failed to resend verification code. Please try again later.')
       );
     } finally {
       setIsResending(false);

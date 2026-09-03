@@ -542,39 +542,77 @@ def trigger_realtime_notification(sender, instance, created, **kwargs):
         from channels.layers import get_channel_layer
         from asgiref.sync import async_to_sync
         
+        # Compute a nice default message if content_preview is empty
+        notif_message = ""
+        if instance.notification_type == Notification.NotificationType.LIKE:
+            notif_message = f"{instance.sender.username} liked your post." if instance.sender else "Someone liked your post."
+        elif instance.notification_type == Notification.NotificationType.COMMENT:
+            notif_message = f"{instance.sender.username} commented on your post." if instance.sender else "Someone commented on your post."
+        elif instance.notification_type == Notification.NotificationType.FOLLOW:
+            notif_message = f"{instance.sender.username} started following you." if instance.sender else "You have a new follower."
+        elif instance.notification_type == Notification.NotificationType.MESSAGE:
+            sender_name = instance.sender.username if instance.sender else "Someone"
+            notif_message = f"New message from {sender_name}: {instance.content_preview or ''}"
+        else:
+            notif_message = instance.content_preview or "You have a new update."
+
+        # 1. Realtime WebSocket dispatch
         channel_layer = get_channel_layer()
         if channel_layer:
             sender_pic = '/static/images/default_avatar.png'
-            if instance.sender and instance.sender.profile.profile_picture:
+            if instance.sender and hasattr(instance.sender, 'profile') and instance.sender.profile.profile_picture:
                 sender_pic = instance.sender.profile.profile_picture.url
-                
-            # Compute a nice default message if content_preview is empty
-            notif_message = ""
-            if instance.notification_type == Notification.NotificationType.LIKE:
-                notif_message = f"{instance.sender.username} liked your post."
-            elif instance.notification_type == Notification.NotificationType.COMMENT:
-                notif_message = f"{instance.sender.username} commented on your post."
-            elif instance.notification_type == Notification.NotificationType.FOLLOW:
-                notif_message = f"{instance.sender.username} started following you."
-            elif instance.notification_type == Notification.NotificationType.MESSAGE:
-                notif_message = f"New message from {instance.sender.username}: {instance.content_preview or ''}"
-            else:
-                notif_message = instance.content_preview or "You have a new update."
 
-            async_to_sync(channel_layer.group_send)(
-                f"user_{instance.recipient.id}",
-                {
-                    "type": "send_notification",
-                    "notification_id": instance.id,
-                    "sender": instance.sender.username if instance.sender else "System",
-                    "sender_avatar": sender_pic,
-                    "notification_type": instance.notification_type,
-                    "post_id": instance.post.id if instance.post else None,
-                    "is_read": instance.is_read,
-                    "timestamp": "Just now",
-                    "message": notif_message
-                }
+            try:
+                async_to_sync(channel_layer.group_send)(
+                    f"user_{instance.recipient.id}",
+                    {
+                        "type": "send_notification",
+                        "notification_id": instance.id,
+                        "sender": instance.sender.username if instance.sender else "System",
+                        "sender_avatar": sender_pic,
+                        "notification_type": instance.notification_type,
+                        "post_id": instance.post.id if instance.post else None,
+                        "is_read": instance.is_read,
+                        "timestamp": "Just now",
+                        "message": notif_message
+                    }
+                )
+            except Exception:
+                pass
+
+        # 2. Native FCM Push Notification dispatch to recipient's devices
+        try:
+            from core.firebase import send_notification_to_user
+
+            sender_name = instance.sender.username if instance.sender else "SportsSphere"
+            push_title = f"SportsSphere - {sender_name}" if instance.sender else "SportsSphere"
+
+            push_data = {
+                "notification_id": str(instance.id),
+                "type": str(instance.notification_type),
+                "sender_username": instance.sender.username if instance.sender else "System",
+                "post_id": str(instance.post.id) if instance.post else "",
+            }
+            if instance.post:
+                push_data["route"] = f"/feed?post={instance.post.id}"
+            elif instance.notification_type == Notification.NotificationType.MESSAGE and instance.sender:
+                push_data["route"] = f"/messages/{instance.sender.username}"
+            elif instance.notification_type == Notification.NotificationType.FOLLOW and instance.sender:
+                push_data["route"] = f"/profile/{instance.sender.username}"
+            else:
+                push_data["route"] = "/notifications"
+
+            send_notification_to_user(
+                user=instance.recipient,
+                title=push_title,
+                body=notif_message,
+                data=push_data,
+                android_channel_id="default",
+                sound="default",
             )
+        except Exception:
+            pass
 
 
 class ContactMessage(models.Model):
