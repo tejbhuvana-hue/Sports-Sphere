@@ -139,6 +139,112 @@ class CurrentUserAPIView(APIView):
         })
 
 
+class GoogleAuthAPIView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        id_token_str = request.data.get('id_token') or request.data.get('token')
+        role = request.data.get('role', User.Role.PLAYER)
+
+        if not id_token_str or not isinstance(id_token_str, str):
+            return Response({'error': 'Google ID token is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        id_token_str = id_token_str.strip()
+        payload = None
+
+        # 1. Attempt verification via Google Auth library
+        try:
+            from google.oauth2 import id_token as google_id_token
+            from google.auth.transport import requests as google_requests
+            payload = google_id_token.verify_oauth2_token(
+                id_token_str,
+                google_requests.Request()
+            )
+        except Exception as g_err:
+            logger.debug("google.oauth2 verification failed, trying firebase_admin: %s", g_err)
+            # 2. Fallback attempt verification via Firebase Admin SDK
+            try:
+                from .firebase import get_firebase_app
+                from firebase_admin import auth as firebase_auth
+                app = get_firebase_app()
+                if app:
+                    payload = firebase_auth.verify_id_token(id_token_str)
+                else:
+                    logger.warning("Firebase Admin app not available for token verification.")
+            except Exception as fb_err:
+                logger.warning("Firebase ID token verification failed: %s", fb_err)
+
+        if not payload:
+            return Response({'error': 'Invalid or expired Google token. Please try again.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        email = payload.get('email')
+        if not email:
+            return Response({'error': 'Google account did not provide an email address.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        email_verified = payload.get('email_verified', True)
+        if not email_verified:
+            return Response({'error': 'Your Google email address is not verified.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        email = email.lower().strip()
+        first_name = payload.get('given_name') or (payload.get('name', '').split(' ')[0] if payload.get('name') else '')
+        name_parts = payload.get('name', '').split(' ') if payload.get('name') else []
+        last_name = payload.get('family_name') or (' '.join(name_parts[1:]) if len(name_parts) > 1 else '')
+
+        # Check if user already exists
+        user = User.objects.filter(email__iexact=email).first()
+        is_new_user = False
+
+        if user:
+            if not user.is_active:
+                return Response({'error': 'This account has been deactivated.'}, status=status.HTTP_403_FORBIDDEN)
+            # Update names if empty
+            if not user.first_name and first_name:
+                user.first_name = first_name
+            if not user.last_name and last_name:
+                user.last_name = last_name
+            user.save()
+        else:
+            is_new_user = True
+            # Validate role
+            valid_roles = [r[0] for r in User.Role.choices]
+            if role not in valid_roles:
+                role = User.Role.PLAYER
+
+            # Generate unique username
+            base_username = (
+                payload.get('name') or email.split('@')[0]
+            ).strip().lower()
+            clean_username = slugify(base_username).replace('-', '_')
+            if not clean_username:
+                clean_username = email.split('@')[0].replace('.', '_')
+
+            candidate_username = clean_username
+            counter = 1
+            while User.objects.filter(username__iexact=candidate_username).exists():
+                candidate_username = f"{clean_username}_{counter}"
+                counter += 1
+
+            user = User.objects.create_user(
+                username=candidate_username,
+                email=email,
+                role=role,
+                first_name=first_name,
+                last_name=last_name
+            )
+            user.set_unusable_password()
+            user.save()
+
+        token, _ = Token.objects.get_or_create(user=user)
+        user_data = UserSerializer(user, context={'request': request}).data
+
+        return Response({
+            'token': token.key,
+            'user': user_data,
+            'is_new_user': is_new_user,
+            'message': f"Welcome to SportsSphere, {user.username}!" if is_new_user else f"Welcome back, {user.username}!"
+        }, status=status.HTTP_201_CREATED if is_new_user else status.HTTP_200_OK)
+
+
 class PasswordResetAPIView(APIView):
     permission_classes = [permissions.AllowAny]
 

@@ -50,6 +50,7 @@ export const getMediaUrl = (path) => {
 export const authAPI = {
   register: (data) => api.post("/auth/register/", data),
   login: (data) => api.post("/auth/login/", data),
+  googleAuth: (data) => api.post("/auth/google/", data),
   logout: (fcmToken) =>
     api.post("/auth/logout/", fcmToken ? { token: fcmToken } : {}),
   getCurrentUser: () => api.get("/auth/me/"),

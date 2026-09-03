@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { GoogleSignInButton } from '../components/GoogleSignInButton';
 
 export const RegisterPage = () => {
   const [formData, setFormData] = useState({
@@ -229,6 +230,19 @@ export const RegisterPage = () => {
             {isSubmitting ? 'Creating Account...' : 'Register'}
           </button>
         </form>
+
+        <div style={{ display: 'flex', alignItems: 'center', margin: '20px 0', gap: '12px' }}>
+          <div style={{ flex: 1, height: '1px', background: 'var(--input-border, rgba(255, 255, 255, 0.15))' }} />
+          <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>or</span>
+          <div style={{ flex: 1, height: '1px', background: 'var(--input-border, rgba(255, 255, 255, 0.15))' }} />
+        </div>
+
+        <GoogleSignInButton
+          role={formData.role}
+          text={`Sign up with Google as ${roles.find(r => r.value === formData.role)?.label || 'Player'}`}
+          onSuccess={() => navigate('/feed')}
+          onError={(errMsg) => setError(errMsg)}
+        />
 
         <div style={{ textAlign: 'center', marginTop: '24px', fontSize: '0.88rem', color: 'var(--text-secondary)' }}>
           Already have an account?{' '}

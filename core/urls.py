@@ -5,6 +5,7 @@ urlpatterns = [
     # Authentication
     path('auth/register/', views.RegisterAPIView.as_view(), name='api_register'),
     path('auth/login/', views.LoginAPIView.as_view(), name='api_login'),
+    path('auth/google/', views.GoogleAuthAPIView.as_view(), name='api_google_auth'),
     path('auth/logout/', views.LogoutAPIView.as_view(), name='api_logout'),
     path('auth/me/', views.CurrentUserAPIView.as_view(), name='api_current_user'),
     path('auth/password-reset/', views.PasswordResetAPIView.as_view(), name='api_password_reset'),

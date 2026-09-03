@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { GoogleSignInButton } from '../components/GoogleSignInButton';
 
 export const LoginPage = () => {
   const [username, setUsername] = useState('');
@@ -142,6 +143,25 @@ export const LoginPage = () => {
             {isSubmitting ? 'Signing In...' : 'Sign In'}
           </button>
         </form>
+
+        <div style={{ display: 'flex', alignItems: 'center', margin: '20px 0', gap: '12px' }}>
+          <div style={{ flex: 1, height: '1px', background: 'var(--input-border, rgba(255, 255, 255, 0.15))' }} />
+          <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>or</span>
+          <div style={{ flex: 1, height: '1px', background: 'var(--input-border, rgba(255, 255, 255, 0.15))' }} />
+        </div>
+
+        <GoogleSignInButton
+          onSuccess={(user) => {
+            if (user.is_superuser && nextUrl === '/admin-dashboard') {
+              navigate('/admin-dashboard');
+            } else if (user.is_superuser && !queryParams.get('next')) {
+              navigate('/admin-dashboard');
+            } else {
+              navigate(nextUrl);
+            }
+          }}
+          onError={(errMsg) => setError(errMsg)}
+        />
 
         <div style={{ textAlign: 'center', marginTop: '24px', fontSize: '0.88rem', color: 'var(--text-secondary)' }}>
           Don't have an account?{' '}

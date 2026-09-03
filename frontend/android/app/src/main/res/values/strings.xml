@@ -4,4 +4,5 @@
     <string name="title_activity_main">SportsSphere</string>
     <string name="package_name">com.sportssphere.app</string>
     <string name="custom_url_scheme">com.sportssphere.app</string>
+    <string name="server_client_id">596687791143-1vsd1ekqjg29gdv0k3h1bjfjvudrl0jj.apps.googleusercontent.com</string>
 </resources>
