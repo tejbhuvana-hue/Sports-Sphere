@@ -706,3 +706,28 @@ class StoryView(models.Model):
         return f"{self.viewer.username} viewed story {self.story_id} at {self.viewed_at}"
 
 
+class DeviceToken(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='device_tokens'
+    )
+    token = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['token'],
+                name='unique_device_token'
+            )
+        ]
+
+    def __str__(self):
+        token_preview = self.token[:20] + '...' if len(self.token) > 20 else self.token
+        return f"{self.user.username} - {token_preview}"
+
+
+

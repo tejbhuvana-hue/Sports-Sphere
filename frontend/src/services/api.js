@@ -50,9 +50,15 @@ export const getMediaUrl = (path) => {
 export const authAPI = {
   register: (data) => api.post("/auth/register/", data),
   login: (data) => api.post("/auth/login/", data),
-  logout: () => api.post("/auth/logout/"),
+  logout: (fcmToken) =>
+    api.post("/auth/logout/", fcmToken ? { token: fcmToken } : {}),
   getCurrentUser: () => api.get("/auth/me/"),
   passwordReset: (data) => api.post("/auth/password-reset/", data),
+};
+
+export const deviceTokensAPI = {
+  registerToken: (token) => api.post("/device-tokens/", { token }),
+  deleteToken: (token) => api.delete("/device-tokens/", { data: { token } }),
 };
 
 export const profilesAPI = {

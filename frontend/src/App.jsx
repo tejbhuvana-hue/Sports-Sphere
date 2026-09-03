@@ -65,11 +65,16 @@ const SmartHomeRoute = () => {
 import { AdminLoginPage } from './pages/AdminLoginPage';
 import { AdminDashboardPage } from './pages/AdminDashboardPage';
 
+// Mobile Push Notification Integration
+import { PushNotificationHandler } from './components/PushNotificationHandler';
+
 export default function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
         <BrowserRouter>
+          {/* Push notification registration and tap listener */}
+          <PushNotificationHandler />
           <Routes>
             {/* Smart Root Route: Home dashboard for users, Landing for guests */}
             <Route path="/" element={<SmartHomeRoute />} />

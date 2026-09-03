@@ -8,6 +8,7 @@ urlpatterns = [
     path('auth/logout/', views.LogoutAPIView.as_view(), name='api_logout'),
     path('auth/me/', views.CurrentUserAPIView.as_view(), name='api_current_user'),
     path('auth/password-reset/', views.PasswordResetAPIView.as_view(), name='api_password_reset'),
+    path('device-tokens/', views.DeviceTokenAPIView.as_view(), name='api_device_tokens'),
 
     # Profiles & Users
     path('profiles/update/', views.ProfileUpdateAPIView.as_view(), name='api_profile_update'),

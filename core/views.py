@@ -7,6 +7,7 @@ from django.shortcuts import get_object_or_404
 from django.db.models import Count, Q
 from django.utils.text import slugify
 import datetime
+import logging
 from itertools import combinations
 
 from .models import (
@@ -14,7 +15,8 @@ from .models import (
     RecruitmentPost, Application, ClubMember, Tournament, Match,
     SponsorshipOpportunity, SponsorshipApplication,
     ResumeExperience, ResumeAchievement, ResumeCertificate, ResumeStatistic,
-    Endorsement, Recommendation, ContactMessage, Blog, Story, StoryView
+    Endorsement, Recommendation, ContactMessage, Blog, Story, StoryView,
+    DeviceToken
 )
 from .serializers import (
     UserSerializer, UserSummarySerializer, ProfileSerializer,
@@ -27,11 +29,13 @@ from .serializers import (
     ResumeCertificateSerializer, ResumeStatisticSerializer,
     EndorsementSerializer, RecommendationSerializer,
     BlogSerializer, ContactMessageSerializer, AdminUserUpdateSerializer,
-    StorySerializer, StoryViewSerializer, StoryTrayGroupSerializer
+    StorySerializer, StoryViewSerializer, StoryTrayGroupSerializer,
+    DeviceTokenSerializer
 )
 from django.utils import timezone
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 # ==========================================
@@ -113,6 +117,10 @@ class LogoutAPIView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
+        fcm_token = request.data.get('token') or request.data.get('fcm_token')
+        if fcm_token and isinstance(fcm_token, str) and fcm_token.strip():
+            DeviceToken.objects.filter(token=fcm_token.strip(), user=request.user).delete()
+            logger.info("Device token removed on logout for user %s", request.user.username)
         Token.objects.filter(user=request.user).delete()
         return Response({'message': 'Logged out successfully.'})
 
@@ -139,6 +147,51 @@ class PasswordResetAPIView(APIView):
         if not email:
             return Response({'error': 'Email is required.'}, status=status.HTTP_400_BAD_REQUEST)
         return Response({'message': f"A password reset link has been sent to {email}. (Simulated)"})
+
+
+class DeviceTokenAPIView(APIView):
+    """
+    API endpoint for managing Capacitor FCM device tokens.
+    POST: Register or update an FCM device token for the authenticated user.
+    DELETE: Deregister/remove an FCM device token for the authenticated user.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        token_str = request.data.get('token')
+        if not token_str or not isinstance(token_str, str) or not token_str.strip():
+            return Response({'error': 'Device token is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        token_str = token_str.strip()
+
+        # If the same token already exists, update/reuse it rather than creating duplicates.
+        # This also cleanly handles phone handover: reassociating the token with the newly authenticated user.
+        device_token, created = DeviceToken.objects.update_or_create(
+            token=token_str,
+            defaults={'user': request.user}
+        )
+        logger.info("Device token %s for user %s", "registered" if created else "updated", request.user.username)
+
+        return Response({
+            'message': 'Device token registered successfully.',
+            'id': device_token.id,
+            'created': created,
+        }, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+
+    def delete(self, request):
+        token_str = request.data.get('token') or request.query_params.get('token')
+        if not token_str or not isinstance(token_str, str) or not token_str.strip():
+            return Response({'error': 'Device token is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        token_str = token_str.strip()
+        deleted_count, _ = DeviceToken.objects.filter(token=token_str, user=request.user).delete()
+        logger.info("Deregistered device token for user %s (count: %d)", request.user.username, deleted_count)
+
+        return Response({
+            'message': 'Device token unregistered successfully.',
+            'deleted': deleted_count > 0,
+        }, status=status.HTTP_200_OK)
+
 
 
 # ==========================================

@@ -6,7 +6,8 @@ from .models import (
     RecruitmentPost, Application, ClubMember, Tournament, Match,
     SponsorshipOpportunity, SponsorshipApplication,
     ResumeExperience, ResumeAchievement, ResumeCertificate, ResumeStatistic,
-    Endorsement, Recommendation, ContactMessage, Blog, Story, StoryView
+    Endorsement, Recommendation, ContactMessage, Blog, Story, StoryView,
+    DeviceToken
 )
 
 User = get_user_model()
@@ -591,3 +592,15 @@ class StoryTrayGroupSerializer(serializers.Serializer):
     has_unseen = serializers.BooleanField()
     latest_created_at = serializers.DateTimeField()
     is_current_user = serializers.BooleanField()
+
+
+class DeviceTokenSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DeviceToken
+        fields = ['id', 'token', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def validate_token(self, value):
+        if not value or not value.strip():
+            raise serializers.ValidationError("Device token cannot be empty.")
+        return value.strip()

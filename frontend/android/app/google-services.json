@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "596687791143",
+    "project_id": "sportssphere-dcd3b",
+    "storage_bucket": "sportssphere-dcd3b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:596687791143:android:be37a794c0912e440f9a02",
+        "android_client_info": {
+          "package_name": "com.sportssphere.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCSUwAP5QuY4tjUr4eUP-eyT1Y5CVgvRDs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

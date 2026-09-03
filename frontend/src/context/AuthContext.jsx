@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authAPI, notificationsAPI } from '../services/api';
+import { getStoredPushToken, removeDeviceTokenFromBackend } from '../services/pushNotifications';
 
 const AuthContext = createContext();
 
@@ -65,8 +66,16 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
+      const fcmToken = getStoredPushToken();
+      if (fcmToken && token) {
+        try {
+          await removeDeviceTokenFromBackend(fcmToken);
+        } catch (pushErr) {
+          console.warn('Notice while removing device token on logout:', pushErr);
+        }
+      }
       if (token) {
-        await authAPI.logout();
+        await authAPI.logout(fcmToken);
       }
     } catch (err) {
       console.warn('Logout API error', err);
